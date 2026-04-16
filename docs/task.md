@@ -1,9 +1,8 @@
-# Pink Cute & Advanced Features Tasks
+# Dynamic Update Tasks (Large Cactus, Mouse, Variable Jump)
 
-- [x] Update `assets.ts` with new color palette (pinks/pastels), jumping cat sprite, and heart sprites.
-- [x] Create `audio.ts` utility for Web Audio API synthesis (BGM sequencer and SFX oscillators).
-- [x] Implement fractional health system and precise AABB collision.
-- [x] Implement invincibility frames (i-frames) upon hit.
-- [x] Implement broken heart particles (dropping animation) directly in canvas renderer.
-- [x] Revamp `Game.tsx` & `page.tsx` UI to a pink theme and handle audio initialization gesture.
-- [x] Integrate BGM and SFX triggers in the `useGameLoop` hook.
+- [ ] Update `assets.ts` with `OBSTACLE_CACTUS_LARGE` and `ITEM_MOUSE` sprites, and append new colors.
+- [ ] Update `audio.ts` with a `playHealSound` oscillator function.
+- [ ] Update `useGameLoop.ts` to handle variable jump height (less gravity while space is held).
+- [ ] Update `useGameLoop.ts` entity spawning logic to randomly choose between small cactus, large cactus, and mouse.
+- [ ] Update `useGameLoop.ts` collision logic to heal when colliding with a mouse, and remove the mouse.
+- [ ] Update entity drawing logic in canvas to render the correct sprite based on type.
