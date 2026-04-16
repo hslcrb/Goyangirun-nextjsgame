@@ -14,7 +14,7 @@ export default function Game() {
   };
 
   return (
-    <div className="relative flex flex-col items-center justify-center p-8 bg-pink-50/80 backdrop-blur-sm rounded-xl shadow-[0_20px_50px_rgba(255,182,193,0.3)] overflow-hidden border-4 border-pink-200">
+    <div className="select-none relative flex flex-col items-center justify-center p-8 bg-pink-50/80 backdrop-blur-sm rounded-xl shadow-[0_20px_50px_rgba(255,182,193,0.3)] overflow-hidden border-4 border-pink-200">
       
       {/* Top Bar for Score and Mute Button */}
       <div className="w-full flex justify-between items-center mb-4">

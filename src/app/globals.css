@@ -18,6 +18,11 @@ body {
   -webkit-touch-callout: none;
 }
 
+*, *::before, *::after {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
 img, a {
   -webkit-user-drag: none;
 }
