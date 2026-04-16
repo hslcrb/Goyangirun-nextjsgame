@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { drawPixelArt, getHeartSprite, CAT_RUN_1, CAT_RUN_2, CAT_JUMP, OBSTACLE_CACTUS, OBSTACLE_CACTUS_LARGE, ITEM_MOUSE } from '@/utils/assets';
+import { drawPixelArt, getHeartSprite, CAT_RUN_1, CAT_RUN_2, CAT_JUMP, CAT_CRY, OBSTACLE_CACTUS, OBSTACLE_CACTUS_LARGE, ITEM_MOUSE } from '@/utils/assets';
 import { audioManager } from '@/utils/audio';
 
 type GameObject = {
@@ -254,7 +254,14 @@ export function useGameLoop() {
       // Draw Cat with iframe flashing
       const isVisible = s.cat.iframeTime <= 0 || s.frameCount % 10 < 5;
       if (isVisible) {
-        let catFrame = s.cat.isJumping ? CAT_JUMP : (s.frameCount % 20 < 10 ? CAT_RUN_1 : CAT_RUN_2);
+        let catFrame = CAT_RUN_1;
+        if (s.cat.iframeTime > 0) {
+          catFrame = CAT_CRY;
+        } else if (s.cat.isJumping) {
+          catFrame = CAT_JUMP;
+        } else {
+          catFrame = s.frameCount % 20 < 10 ? CAT_RUN_1 : CAT_RUN_2;
+        }
         drawPixelArt(ctx, catFrame, s.cat.x, s.cat.y, PIXEL_SIZE);
       }
 

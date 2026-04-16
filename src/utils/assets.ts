@@ -10,6 +10,7 @@ export const COLORS: Record<string, string> = {
   'G': '#B0BEC5', // Grey for empty heart
   'M': '#E0E0E0', // Mouse grey
   'P': '#F48FB1', // Mouse pink tail/nose
+  'T': '#4FC3F7', // Blue for tears
 };
 
 export const CAT_RUN_1 = [
@@ -56,6 +57,22 @@ export const CAT_JUMP = [
   "   0111111110 ",
   "    0110110   ",
   "    0000000   "
+];
+
+// Crying / Hurt Cat
+export const CAT_CRY = [
+  "   00    00   ",
+  "  0130000310  ",
+  " 011111111110 ",
+  " 01T011110T10 ", // T for tears below eyes
+  " 011100001110 ", // sad mouth
+  "  011TTTT1000", // tears falling
+  "  011111111110",
+  "  011111111110",
+  "   0111111110 ",
+  "    000  000  ",
+  "    0 0  0 0  ",
+  "   0000 0000  "
 ];
 
 export const OBSTACLE_CACTUS = [
