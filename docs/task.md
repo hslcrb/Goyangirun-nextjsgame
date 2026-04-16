@@ -1,9 +1,9 @@
-# Cat Run Implementation Tasks
+# Pink Cute & Advanced Features Tasks
 
-- [x] Create Next.js project inside a temporary folder and move it to the current directory (to bypass npm naming restrictions).
-- [x] Clean up default Next.js boilerplate and global styles.
-- [x] Create pixel art utilities.
-- [x] Implement `useGameLoop` hook (handling logic, physics, score).
-- [x] Implement `Game` component relying on `<canvas>`.
-- [x] Update `page.tsx` integrating the game with UI wrapper.
-- [x] Verify functionality (obstacle spawning, collision detection, game over logic).
+- [x] Update `assets.ts` with new color palette (pinks/pastels), jumping cat sprite, and heart sprites.
+- [x] Create `audio.ts` utility for Web Audio API synthesis (BGM sequencer and SFX oscillators).
+- [x] Implement fractional health system and precise AABB collision.
+- [x] Implement invincibility frames (i-frames) upon hit.
+- [x] Implement broken heart particles (dropping animation) directly in canvas renderer.
+- [x] Revamp `Game.tsx` & `page.tsx` UI to a pink theme and handle audio initialization gesture.
+- [x] Integrate BGM and SFX triggers in the `useGameLoop` hook.
