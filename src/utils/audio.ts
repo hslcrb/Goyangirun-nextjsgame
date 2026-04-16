@@ -74,6 +74,30 @@ class AudioEngine {
     osc.stop(this.ctx.currentTime + 0.2);
   }
 
+  // Play a happy arpeggio for heal
+  playHeal() {
+    if (!this.ctx || this.isMuted) return;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+
+    osc.type = 'sine';
+    
+    // Quick arpeggio C5, E5, G5
+    osc.frequency.setValueAtTime(523.25, this.ctx.currentTime);
+    osc.frequency.setValueAtTime(659.25, this.ctx.currentTime + 0.05);
+    osc.frequency.setValueAtTime(783.99, this.ctx.currentTime + 0.1);
+
+    gain.gain.setValueAtTime(0, this.ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.2, this.ctx.currentTime + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.2);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    osc.start();
+    osc.stop(this.ctx.currentTime + 0.2);
+  }
+
   // Simple sequencer for background music
   startBgm() {
     if (this.isPlayingBgm) return;

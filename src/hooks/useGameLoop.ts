@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from 'react';
-import { drawPixelArt, getHeartSprite, CAT_RUN_1, CAT_RUN_2, CAT_JUMP, OBSTACLE_CACTUS } from '@/utils/assets';
+import { drawPixelArt, getHeartSprite, CAT_RUN_1, CAT_RUN_2, CAT_JUMP, OBSTACLE_CACTUS, OBSTACLE_CACTUS_LARGE, ITEM_MOUSE } from '@/utils/assets';
 import { audioManager } from '@/utils/audio';
 
 type GameObject = {
+  type: 'cactus_small' | 'cactus_large' | 'mouse';
   x: number;
   y: number;
   width: number;
   height: number;
   id: number;
+  active: boolean; // false when mouse is eaten
 };
 
 type HeartParticle = {
@@ -28,8 +30,8 @@ export function useGameLoop() {
 
   // Game state refs
   const state = useRef({
-    cat: { x: 50, y: 0, width: 56, height: 48, vy: 0, isJumping: false, iframeTime: 0 },
-    obstacles: [] as GameObject[],
+    cat: { x: 50, y: 0, width: 56, height: 48, vy: 0, isJumping: false, iframeTime: 0, isHoldingJump: false },
+    entities: [] as GameObject[],
     heartParticles: [] as HeartParticle[],
     score: 0,
     hp: 15,
@@ -37,15 +39,21 @@ export function useGameLoop() {
     frameCount: 0,
     isGameOver: false,
     isStarted: false,
-    nextObstacleId: 0
+    nextEntityId: 0,
+    nextSpawnTime: 60
   });
 
   const jump = () => {
+    state.current.cat.isHoldingJump = true;
     if (state.current.cat.isJumping || state.current.isGameOver || !state.current.isStarted) return;
     state.current.cat.vy = -16;
     state.current.cat.isJumping = true;
     audioManager.resume();
     audioManager.playJump();
+  };
+
+  const releaseJump = () => {
+    state.current.cat.isHoldingJump = false;
   };
 
   const startGame = () => {
@@ -54,8 +62,8 @@ export function useGameLoop() {
     audioManager.startBgm();
 
     state.current = {
-      cat: { x: 50, y: 0, width: 56, height: 48, vy: 0, isJumping: false, iframeTime: 0 },
-      obstacles: [],
+      cat: { x: 50, y: 0, width: 56, height: 48, vy: 0, isJumping: false, iframeTime: 0, isHoldingJump: false },
+      entities: [],
       heartParticles: [],
       score: 0,
       hp: 15,
@@ -63,7 +71,8 @@ export function useGameLoop() {
       frameCount: 0,
       isGameOver: false,
       isStarted: true,
-      nextObstacleId: 0
+      nextEntityId: 0,
+      nextSpawnTime: 60
     };
     setIsStarted(true);
     setIsGameOver(false);
@@ -107,30 +116,56 @@ export function useGameLoop() {
         s.frameCount++;
         if (s.cat.iframeTime > 0) s.cat.iframeTime--;
         
-        // Physics
+        // Physics (Variable Jump)
         s.cat.y += s.cat.vy;
         if (s.cat.y < GROUND_Y - s.cat.height) {
-          s.cat.vy += 0.8; // Gravity
+          // Less gravity if holding jump and moving up
+          if (s.cat.isHoldingJump && s.cat.vy < 0) {
+            s.cat.vy += 0.45;
+          } else {
+            s.cat.vy += 0.8; // Normal gravity
+          }
         } else {
           s.cat.y = GROUND_Y - s.cat.height;
           s.cat.vy = 0;
           s.cat.isJumping = false;
         }
 
-        // Spawn obstacles
-        if (s.frameCount % Math.max(50, 120 - Math.floor(s.speed * 4)) === 0) {
-          s.obstacles.push({
+        // Spawn entities dynamically
+        if (s.frameCount >= s.nextSpawnTime) {
+          const rand = Math.random();
+          let type: 'cactus_small' | 'cactus_large' | 'mouse' = 'cactus_small';
+          let w = 36, h = 44;
+          
+          if (rand > 0.9) {
+            type = 'mouse';
+            w = 44; // 11 cols * 4
+            h = 28; // 7 rows * 4
+          } else if (rand > 0.6) {
+            type = 'cactus_large';
+            w = 52; // 13 cols * 4
+            h = 52; // 13 rows * 4
+          }
+
+          s.entities.push({
+            type,
             x: canvas.width,
-            y: GROUND_Y - 44,
-            width: 36,
-            height: 44,
-            id: s.nextObstacleId++
+            y: GROUND_Y - h,
+            width: w,
+            height: h,
+            id: s.nextEntityId++,
+            active: true
           });
+
+          // Next spawn varies based on speed
+          const baseInterval = Math.max(40, 100 - Math.floor(s.speed * 4));
+          const variance = Math.floor(Math.random() * 40) - 10;
+          s.nextSpawnTime = s.frameCount + baseInterval + variance;
         }
 
-        // Move obstacles
-        s.obstacles.forEach(obs => {
-          obs.x -= s.speed;
+        // Move entities
+        s.entities.forEach(ent => {
+          ent.x -= s.speed;
         });
 
         // Move particles
@@ -147,50 +182,62 @@ export function useGameLoop() {
           s.speed += 0.005; // gradually increase speed
         }
 
-        // Clean up passed obstacles
-        s.obstacles = s.obstacles.filter(obs => obs.x + obs.width > 0);
+        // Clean up passed entities
+        s.entities = s.entities.filter(ent => ent.x + ent.width > 0 && ent.active);
 
         // Precise AABB Collision
-        if (s.cat.iframeTime <= 0) {
-          let hitDamage = 0;
-          
-          for (let i = 0; i < s.obstacles.length; i++) {
-            const obs = s.obstacles[i];
-            const catRect = { left: s.cat.x + 8, right: s.cat.x + s.cat.width - 8, top: s.cat.y + 8, bottom: s.cat.y + s.cat.height };
-            const obsRect = { left: obs.x + 4, right: obs.x + obs.width - 4, top: obs.y + 4, bottom: obs.y + obs.height };
+        let hitDamage = 0;
+        
+        for (let i = 0; i < s.entities.length; i++) {
+          const ent = s.entities[i];
+          if (!ent.active) continue;
 
-            // Check overlap
-            if (catRect.left < obsRect.right && catRect.right > obsRect.left &&
-                catRect.top < obsRect.bottom && catRect.bottom > obsRect.top) {
-              
+          // Padding differs by type to be forgiving
+          const p = ent.type === 'cactus_large' ? 6 : 4;
+          const catRect = { left: s.cat.x + 8, right: s.cat.x + s.cat.width - 8, top: s.cat.y + 8, bottom: s.cat.y + s.cat.height };
+          const entRect = { left: ent.x + p, right: ent.x + ent.width - p, top: ent.y + p, bottom: ent.y + ent.height };
+
+          // Check overlap
+          if (catRect.left < entRect.right && catRect.right > entRect.left &&
+              catRect.top < entRect.bottom && catRect.bottom > entRect.top) {
+            
+            if (ent.type === 'mouse') {
+              ent.active = false; // Eat mouse
+              s.hp = Math.min(15, s.hp + 3); // Heal 1 heart (3 parts)
+              setHp(s.hp);
+              audioManager.playHeal();
+            } else if (s.cat.iframeTime <= 0) {
               // Calculate overlap area to determine severity
-              const overlapX = Math.min(catRect.right, obsRect.right) - Math.max(catRect.left, obsRect.left);
-              const overlapY = Math.min(catRect.bottom, obsRect.bottom) - Math.max(catRect.top, obsRect.top);
+              const overlapX = Math.min(catRect.right, entRect.right) - Math.max(catRect.left, entRect.left);
+              const overlapY = Math.min(catRect.bottom, entRect.bottom) - Math.max(catRect.top, entRect.top);
               const overlapArea = overlapX * overlapY;
 
-              if (overlapArea > 800) hitDamage = 3; // Huge hit (1 full heart)
-              else if (overlapArea > 300) hitDamage = 2; // Mid hit (2/3 heart)
-              else hitDamage = 1; // Graze (1/3 heart)
-
-              // Found a hit, break to apply
-              break;
+              if (ent.type === 'cactus_large') {
+                if (overlapArea > 1000) hitDamage = 6; // 2 hearts
+                else hitDamage = 3; // 1 heart
+              } else {
+                if (overlapArea > 800) hitDamage = 3; 
+                else if (overlapArea > 300) hitDamage = 2; 
+                else hitDamage = 1; 
+              }
+              break; // exit loop after finding a hit to process
             }
           }
+        }
 
-          if (hitDamage > 0) {
-            s.hp -= hitDamage;
-            s.cat.iframeTime = 60; // ~1 second of invincibility at 60fps
-            audioManager.playDamage();
-            spawnBrokenHeart(s.cat.x + s.cat.width/2, s.cat.y, hitDamage);
-            
-            if (s.hp <= 0) {
-              s.hp = 0;
-              s.isGameOver = true;
-              setIsGameOver(true);
-              audioManager.stopBgm();
-            }
-            setHp(s.hp);
+        if (hitDamage > 0) {
+          s.hp -= hitDamage;
+          s.cat.iframeTime = 60; // ~1 second of invincibility at 60fps
+          audioManager.playDamage();
+          spawnBrokenHeart(s.cat.x + s.cat.width/2, s.cat.y, hitDamage);
+          
+          if (s.hp <= 0) {
+            s.hp = 0;
+            s.isGameOver = true;
+            setIsGameOver(true);
+            audioManager.stopBgm();
           }
+          setHp(s.hp);
         }
 
         // Sync score
@@ -211,9 +258,13 @@ export function useGameLoop() {
         drawPixelArt(ctx, catFrame, s.cat.x, s.cat.y, PIXEL_SIZE);
       }
 
-      // Draw Obstacles
-      s.obstacles.forEach(obs => {
-        drawPixelArt(ctx, OBSTACLE_CACTUS, obs.x, obs.y, PIXEL_SIZE);
+      // Draw Entities
+      s.entities.forEach(ent => {
+        if (!ent.active) return;
+        let sprite = OBSTACLE_CACTUS;
+        if (ent.type === 'cactus_large') sprite = OBSTACLE_CACTUS_LARGE;
+        if (ent.type === 'mouse') sprite = ITEM_MOUSE;
+        drawPixelArt(ctx, sprite, ent.x, ent.y, PIXEL_SIZE);
       });
 
       // Draw UI Hearts in canvas (top left)
@@ -252,14 +303,22 @@ export function useGameLoop() {
       }
     };
 
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space' || e.code === 'ArrowUp') {
+        releaseJump();
+      }
+    };
+
     window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
 
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
       audioManager.stopBgm();
     };
   }, []); // Empty deps so loop binds once
 
-  return { canvasRef, isGameOver, score, isStarted, hp, startGame, jump };
+  return { canvasRef, isGameOver, score, isStarted, hp, startGame, jump, releaseJump };
 }

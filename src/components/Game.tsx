@@ -5,7 +5,7 @@ import { audioManager } from '@/utils/audio';
 import { useState } from 'react';
 
 export default function Game() {
-  const { canvasRef, isGameOver, score, isStarted, startGame, jump } = useGameLoop();
+  const { canvasRef, isGameOver, score, isStarted, startGame, jump, releaseJump } = useGameLoop();
   const [isMuted, setIsMuted] = useState(false);
 
   const toggleMute = (e: React.MouseEvent) => {
@@ -34,9 +34,12 @@ export default function Game() {
         width={800}
         height={300}
         className="bg-white rounded-lg cursor-pointer max-w-full shadow-inner border-2 border-pink-100"
-        onClick={() => {
+        onMouseDown={() => {
           if (!isStarted || isGameOver) startGame();
           else jump();
+        }}
+        onMouseUp={() => {
+          if (isStarted && !isGameOver) releaseJump();
         }}
         style={{ imageRendering: 'pixelated' }}
       />

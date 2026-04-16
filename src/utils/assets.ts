@@ -8,6 +8,8 @@ export const COLORS: Record<string, string> = {
   '5': '#A5D6A7', // Pastel green (cactus/ground)
   'H': '#FF1744', // Heart red
   'G': '#B0BEC5', // Grey for empty heart
+  'M': '#E0E0E0', // Mouse grey
+  'P': '#F48FB1', // Mouse pink tail/nose
 };
 
 export const CAT_RUN_1 = [
@@ -68,6 +70,32 @@ export const OBSTACLE_CACTUS = [
   "  05550  ",
   "  05550  ",
   "  00000  "
+];
+
+export const OBSTACLE_CACTUS_LARGE = [
+  "    000      ",
+  "   05550  00 ",
+  "   05550 0550",
+  "  00555005550",
+  " 050555555500",
+  " 05055555550 ",
+  " 05055555550 ",
+  " 00555500000 ",
+  "  055550     ",
+  "  055550     ",
+  "  055550     ",
+  "  055550     ",
+  "  000000     "
+];
+
+export const ITEM_MOUSE = [
+  "       000 ",
+  "     0022P0",
+  "  000222200",
+  " 0MM02222P0",
+  " 0MM000000 ",
+  "  0M0      ",
+  " PPP       ",
 ];
 
 // Max HP is 15 (3 parts * 5 hearts).
