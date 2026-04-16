@@ -283,7 +283,7 @@ export function useGameLoop() {
 
       if (!s.isStarted) {
         ctx.fillStyle = '#FF69B4';
-        ctx.font = '20px sans-serif';
+        ctx.font = '20px "OneStoreMobilePop", sans-serif';
         ctx.textAlign = 'center';
       }
 
