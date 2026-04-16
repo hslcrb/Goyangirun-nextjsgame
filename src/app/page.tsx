@@ -7,7 +7,11 @@ export const metadata = {
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen items-center justify-center bg-pink-100">
+    <main 
+      className="flex min-h-screen items-center justify-center bg-pink-100"
+      onContextMenu={(e) => e.preventDefault()}
+      onDragStart={(e) => e.preventDefault()}
+    >
       <Game />
     </main>
   );

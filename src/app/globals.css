@@ -12,4 +12,12 @@ body {
   overflow: hidden;
   font-family: 'OneStoreMobilePop', Arial, Helvetica, sans-serif;
   background-color: #f0f0f0;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+}
+
+img, a {
+  -webkit-user-drag: none;
 }
