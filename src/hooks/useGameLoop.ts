@@ -316,13 +316,19 @@ export function useGameLoop() {
       }
     };
 
+    const preventDefault = (e: Event) => e.preventDefault();
+
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
+    window.addEventListener('contextmenu', preventDefault);
+    window.addEventListener('dragstart', preventDefault);
 
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
+      window.removeEventListener('contextmenu', preventDefault);
+      window.removeEventListener('dragstart', preventDefault);
       audioManager.stopBgm();
     };
   }, []); // Empty deps so loop binds once
