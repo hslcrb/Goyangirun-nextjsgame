@@ -271,13 +271,6 @@ export function useGameLoop() {
                 }
               }
             }
-          } else if (nearestChuru) {
-            // Churu Collector
-            const framesToChuru = (nearestChuru.x - catFront) / s.speed;
-            if (framesToChuru < 15 && !s.cat.isJumping) {
-              jump();
-              s.cat.isHoldingJump = false; // Short jump for churu usually better
-            }
           }
         }
       }
