@@ -79,6 +79,7 @@ export function useGameLoop() {
     setIsGameOver(false);
     setScore(0);
     setHp(15);
+    setGameOverAlpha(0);
   };
 
   const spawnBrokenHeart = (x: number, y: number, damage: number) => {
