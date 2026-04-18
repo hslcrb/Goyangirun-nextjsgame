@@ -257,7 +257,7 @@ export function useGameLoop() {
       }
 
       s.entities.forEach(ent => {
-        const entKey = (ent.type === 'cactus_small' ? 'OBSTACLE_CACTUS_SMALL' : (ent.type === 'cactus_large' ? 'OBSTACLE_CACTUS_LARGE' : 'ITEM_CHURU'));
+        const entKey = (ent.type === 'cactus_small' ? 'OBSTACLE_CACTUS' : (ent.type === 'cactus_large' ? 'OBSTACLE_CACTUS_LARGE' : 'ITEM_CHURU'));
         const entSprite = (Sprites as any)[entKey];
         if (entSprite) {
           drawPixelArt(ctx, entSprite, ent.x, ent.y, 3);
