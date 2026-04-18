@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { drawPixelArt, getHeartSprite, CAT_RUN_1, CAT_RUN_2, CAT_JUMP, CAT_CRY, OBSTACLE_CACTUS, OBSTACLE_CACTUS_LARGE, ITEM_MOUSE } from '@/utils/assets';
+import { drawPixelArt, getHeartSprite, CAT_RUN_1, CAT_RUN_2, CAT_JUMP, CAT_CRY, CAT_SMILE, OBSTACLE_CACTUS, OBSTACLE_CACTUS_LARGE, ITEM_CHURU } from '@/utils/assets';
 import { audioManager } from '@/utils/audio';
 
 type GameObject = {
-  type: 'cactus_small' | 'cactus_large' | 'mouse';
+  type: 'cactus_small' | 'cactus_large' | 'churu';
   x: number;
   y: number;
   width: number;
@@ -30,7 +30,7 @@ export function useGameLoop() {
 
   // Game state refs
   const state = useRef({
-    cat: { x: 50, y: 0, width: 128, height: 48, vy: 0, isJumping: false, iframeTime: 0, isHoldingJump: false },
+    cat: { x: 50, y: 0, width: 128, height: 48, vy: 0, isJumping: false, iframeTime: 0, isHoldingJump: false, smileTime: 0 },
     entities: [] as GameObject[],
     heartParticles: [] as HeartParticle[],
     score: 0,
@@ -62,7 +62,7 @@ export function useGameLoop() {
     audioManager.startBgm();
 
     state.current = {
-      cat: { x: 50, y: 0, width: 128, height: 48, vy: 0, isJumping: false, iframeTime: 0, isHoldingJump: false },
+      cat: { x: 50, y: 0, width: 128, height: 48, vy: 0, isJumping: false, iframeTime: 0, isHoldingJump: false, smileTime: 0 },
       entities: [],
       heartParticles: [],
       score: 0,
@@ -115,6 +115,7 @@ export function useGameLoop() {
       if (s.isStarted && !s.isGameOver) {
         s.frameCount++;
         if (s.cat.iframeTime > 0) s.cat.iframeTime--;
+        if (s.cat.smileTime > 0) s.cat.smileTime--;
         
         // Physics (Variable Jump)
         s.cat.y += s.cat.vy;
@@ -134,13 +135,13 @@ export function useGameLoop() {
         // Spawn entities dynamically
         if (s.frameCount >= s.nextSpawnTime) {
           const rand = Math.random();
-          let type: 'cactus_small' | 'cactus_large' | 'mouse' = 'cactus_small';
+          let type: 'cactus_small' | 'cactus_large' | 'churu' = 'cactus_small';
           let w = 36, h = 44;
           
           if (rand > 0.9) {
-            type = 'mouse';
-            w = 44; // 11 cols * 4
-            h = 28; // 7 rows * 4
+            type = 'churu';
+            w = 80; // 20 cols * 4
+            h = 24; // 6 rows * 4
           } else if (rand > 0.6) {
             type = 'cactus_large';
             w = 52; // 13 cols * 4
@@ -202,9 +203,10 @@ export function useGameLoop() {
           if (catRect.left < entRect.right && catRect.right > entRect.left &&
               catRect.top < entRect.bottom && catRect.bottom > entRect.top) {
             
-            if (ent.type === 'mouse') {
-              ent.active = false; // Eat mouse
+            if (ent.type === 'churu') {
+              ent.active = false; // Eat churu
               s.hp = Math.min(15, s.hp + 3); // Heal 1 heart (3 parts)
+              s.cat.smileTime = 60; // Smile for ~1 sec
               setHp(s.hp);
               audioManager.playHeal();
             } else if (s.cat.iframeTime <= 0) {
@@ -258,6 +260,8 @@ export function useGameLoop() {
         let catFrame = CAT_RUN_1;
         if (s.cat.iframeTime > 0) {
           catFrame = CAT_CRY;
+        } else if (s.cat.smileTime > 0) {
+          catFrame = CAT_SMILE;
         } else if (s.cat.isJumping) {
           catFrame = CAT_JUMP;
         } else {
@@ -271,7 +275,7 @@ export function useGameLoop() {
         if (!ent.active) return;
         let sprite = OBSTACLE_CACTUS;
         if (ent.type === 'cactus_large') sprite = OBSTACLE_CACTUS_LARGE;
-        if (ent.type === 'mouse') sprite = ITEM_MOUSE;
+        if (ent.type === 'churu') sprite = ITEM_CHURU;
         drawPixelArt(ctx, sprite, ent.x, ent.y, PIXEL_SIZE);
       });
 

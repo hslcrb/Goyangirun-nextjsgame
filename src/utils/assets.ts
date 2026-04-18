@@ -11,6 +11,7 @@ export const COLORS: Record<string, string> = {
   'M': '#E0E0E0', // Mouse grey
   'P': '#F48FB1', // Mouse pink tail/nose
   'T': '#4FC3F7', // Blue for tears
+  'C': '#FFCC80', // Churu cream
 };
 
 export const CAT_RUN_1 = [
@@ -75,6 +76,22 @@ export const CAT_CRY = [
   "               00     00   00   "
 ];
 
+// Smiling Cat (Ate Churu)
+export const CAT_SMILE = [
+  "      00             00    00   ",
+  "     0110           0130000310  ",
+  "    0110           011111111110 ",
+  "     010  000000000010011110010 ", // closed happy eyes ^ ^
+  "     0110011111111111130031110  ", // 'w' mouth
+  "      0111111111111111111111000 ",
+  "      01111111111111111111111110",
+  "       0111111111111111111111110",
+  "       011111111111111111111110 ",
+  "        0110000110001111000000  ",
+  "        0110   0110 0110        ",
+  "         00     00   00         "
+];
+
 export const OBSTACLE_CACTUS = [
   "   000   ",
   "  05550  ",
@@ -105,14 +122,13 @@ export const OBSTACLE_CACTUS_LARGE = [
   "  000000     "
 ];
 
-export const ITEM_MOUSE = [
-  "       000 ",
-  "     0022P0",
-  "  000222200",
-  " 0MM02222P0",
-  " 0MM000000 ",
-  "  0M0      ",
-  " PPP       ",
+export const ITEM_CHURU = [
+  "   00000000000000   ",
+  "  0422222222222240  ",
+  " 0441113333331114400",
+  " 04411133333311144CC",
+  "  042222222222224000",
+  "   00000000000000   "
 ];
 
 // Max HP is 15 (3 parts * 5 hearts).
