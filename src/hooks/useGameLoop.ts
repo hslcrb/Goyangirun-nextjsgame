@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { drawPixelArt, getHeartSprite, CAT_RUN_1, CAT_RUN_2, CAT_JUMP, CAT_CRY, CAT_SMILE, OBSTACLE_CACTUS, OBSTACLE_CACTUS_LARGE, ITEM_CHURU } from '@/utils/assets';
+import { drawPixelArt, getHeartSprite, CAT_RUN_1, CAT_RUN_2, CAT_JUMP, CAT_CRY, CAT_SMILE_1, CAT_SMILE_2, OBSTACLE_CACTUS, OBSTACLE_CACTUS_LARGE, ITEM_CHURU } from '@/utils/assets';
 import { audioManager } from '@/utils/audio';
 
 type GameObject = {
@@ -30,7 +30,7 @@ export function useGameLoop() {
 
   // Game state refs
   const state = useRef({
-    cat: { x: 50, y: 0, width: 128, height: 48, vy: 0, isJumping: false, iframeTime: 0, isHoldingJump: false, smileTime: 0 },
+    cat: { x: 50, y: 0, width: 120, height: 57, vy: 0, isJumping: false, iframeTime: 0, isHoldingJump: false, smileTime: 0 },
     entities: [] as GameObject[],
     heartParticles: [] as HeartParticle[],
     score: 0,
@@ -48,7 +48,6 @@ export function useGameLoop() {
     if (state.current.cat.isJumping || state.current.isGameOver || !state.current.isStarted) return;
     state.current.cat.vy = -16;
     state.current.cat.isJumping = true;
-    audioManager.resume();
     audioManager.playJump();
   };
 
@@ -58,11 +57,10 @@ export function useGameLoop() {
 
   const startGame = () => {
     audioManager.init();
-    audioManager.resume();
     audioManager.startBgm();
 
     state.current = {
-      cat: { x: 50, y: 0, width: 128, height: 48, vy: 0, isJumping: false, iframeTime: 0, isHoldingJump: false, smileTime: 0 },
+      cat: { x: 50, y: 0, width: 120, height: 57, vy: 0, isJumping: false, iframeTime: 0, isHoldingJump: false, smileTime: 0 },
       entities: [],
       heartParticles: [],
       score: 0,
@@ -103,7 +101,7 @@ export function useGameLoop() {
     if (!ctx) return;
 
     let animationFrameId: number;
-    const PIXEL_SIZE = 4;
+    const PIXEL_SIZE = 3;
     const GROUND_Y = canvas.height - 20;
 
     // Initial position
@@ -136,16 +134,16 @@ export function useGameLoop() {
         if (s.frameCount >= s.nextSpawnTime) {
           const rand = Math.random();
           let type: 'cactus_small' | 'cactus_large' | 'churu' = 'cactus_small';
-          let w = 36, h = 44;
+          let w = 36, h = 45; // 12x15 * 3
           
           if (rand > 0.9) {
             type = 'churu';
-            w = 80; // 20 cols * 4
-            h = 24; // 6 rows * 4
+            w = 78; // 26 cols * 3
+            h = 18; // 6 rows * 3
           } else if (rand > 0.6) {
             type = 'cactus_large';
-            w = 52; // 13 cols * 4
-            h = 52; // 13 rows * 4
+            w = 48; // 16 cols * 3
+            h = 57; // 19 rows * 3
           }
 
           s.entities.push({
@@ -195,8 +193,8 @@ export function useGameLoop() {
 
           // Padding differs by type to be forgiving
           const p = ent.type === 'cactus_large' ? 6 : 4;
-          // Cat width is 128px, much of the left is tail (~40px) and face right padding (~20px empty if not head)
-          const catRect = { left: s.cat.x + 24, right: s.cat.x + s.cat.width - 16, top: s.cat.y + 12, bottom: s.cat.y + s.cat.height - 4 };
+          // Cat width is 120px (40x3). 
+          const catRect = { left: s.cat.x + 24, right: s.cat.x + s.cat.width - 24, top: s.cat.y + 15, bottom: s.cat.y + s.cat.height - 6 };
           const entRect = { left: ent.x + p, right: ent.x + ent.width - p, top: ent.y + p, bottom: ent.y + ent.height };
 
           // Check overlap
@@ -261,7 +259,7 @@ export function useGameLoop() {
         if (s.cat.iframeTime > 0) {
           catFrame = CAT_CRY;
         } else if (s.cat.smileTime > 0) {
-          catFrame = CAT_SMILE;
+          catFrame = s.frameCount % 20 < 10 ? CAT_SMILE_1 : CAT_SMILE_2;
         } else if (s.cat.isJumping) {
           catFrame = CAT_JUMP;
         } else {
@@ -282,10 +280,9 @@ export function useGameLoop() {
       // Draw UI Hearts in canvas (top left)
       const maxHearts = 5;
       for (let i = 0; i < maxHearts; i++) {
-        // Calculate chunks represented by this heart (heart 0 = hp chars 1-3, heart 1 = hp chars 4-6)
-        let heartValue = Math.max(0, Math.min(3, s.hp - i * 3));
-        let heartSprite = getHeartSprite(heartValue);
-        drawPixelArt(ctx, heartSprite, 20 + i * 40, 20, 3); // Slightly smaller pixel size for UI
+        const heartValue = Math.max(0, Math.min(3, s.hp - i * 3));
+        let heartSprite = getHeartSprite(heartValue === 3, heartValue > 0 && heartValue < 3);
+        drawPixelArt(ctx, heartSprite, 20 + i * 40, 20, 4);
       }
 
       // Draw particles
@@ -306,7 +303,7 @@ export function useGameLoop() {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.code === 'Space' || e.code === 'ArrowUp') {
-        e.preventDefault();
+        audioManager.init();
         if (!state.current.isStarted || state.current.isGameOver) {
           startGame();
         } else {
