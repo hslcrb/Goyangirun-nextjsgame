@@ -1,7 +1,8 @@
-# 봄 테마 BGM 제작 Tasks
+# 이스터 에그: '믿음'의 오토파일럿 활성화 Tasks
 
-- [x] `src/utils/audio/bgm.ts` 리팩토링 및 다성부 시퀀서 구조 설계.
-- [x] 벚꽃 느낌의 부드러운 화상 진행(IV-V-iii-vi) 코드 시퀀스 정의.
-- [x] Triangle wave 기반의 부드러운 가상 악기(EP 느낌) 합성 로직 작성.
-- [x] 약 1분 이상의 곡 구성을 위한 32~64마디 멜로디 시퀀싱.
-- [x] 브라우저 청취 테스트 및 템포 튜닝.
+- [x] `src/hooks/useGameLoop.ts`: 전역 키보드 버퍼 및 키워드 감시 로직 구현.
+- [x] `src/hooks/useGameLoop.ts`: `isAutopilot` 상태 추가 및 자동 점프 AI 로직(장애물 거리 계산) 구현.
+- [x] `src/hooks/useGameLoop.ts`: `autopilotMessage` 및 페이드 애니메이션 상태 추가.
+- [x] `src/components/Game.tsx`: 화면 중앙에 나타나는 감성적인 오토파일럿 메시지 UI 구현.
+- [x] `startGame` 및 `isGameOver` 시 오토파일럿 상태 초기화 로직 확인.
+- [x] 키워드(Believe, 믿는다 등) 입력 테스트 및 오토파일럿 동작 대조.

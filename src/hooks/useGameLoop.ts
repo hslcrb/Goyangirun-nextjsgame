@@ -28,6 +28,8 @@ export function useGameLoop() {
   const [isStarted, setIsStarted] = useState(false);
   const [hp, setHp] = useState(15); // Max 15 (5 hearts * 3 parts)
   const [gameOverAlpha, setGameOverAlpha] = useState(0);
+  const [autopilotMessage, setAutopilotMessage] = useState('');
+  const [messageAlpha, setMessageAlpha] = useState(0);
 
   // Game state refs
   const state = useRef({
@@ -42,7 +44,10 @@ export function useGameLoop() {
     isStarted: false,
     nextEntityId: 0,
     nextSpawnTime: 60,
-    gameOverAlpha: 0
+    gameOverAlpha: 0,
+    isAutopilot: false,
+    inputBuffer: '',
+    messageAlpha: 0
   });
 
   const jump = () => {
@@ -73,8 +78,16 @@ export function useGameLoop() {
       isStarted: true,
       nextEntityId: 0,
       nextSpawnTime: 60,
-      gameOverAlpha: 0
+      gameOverAlpha: 0,
+      isAutopilot: state.current.isAutopilot, // Persist autopilot if already active? User said refresh/gameover resets it. 
+      inputBuffer: '',
+      messageAlpha: 0
     };
+    // Per user request, Game Over resets autopilot. 
+    // Here we reset if it was a game over restart.
+    if (hp <= 0) state.current.isAutopilot = false; 
+    setAutopilotMessage('');
+    setMessageAlpha(0);
     setIsStarted(true);
     setIsGameOver(false);
     setScore(0);
@@ -247,6 +260,24 @@ export function useGameLoop() {
 
         // Sync score
         if (s.score % 10 === 0) setScore(s.score);
+
+        // --- Autopilot AI ---
+        if (s.isAutopilot) {
+          const nearestObstacle = s.entities.find(ent => ent.type.includes('cactus') && ent.x > s.cat.x);
+          if (nearestObstacle) {
+            // Threshold depends on speed to jump at the right time
+            const threshold = 120 + s.speed * 10;
+            if (nearestObstacle.x - s.cat.x < threshold && !s.cat.isJumping) {
+              jump();
+            }
+          }
+        }
+
+        // --- Message Fading ---
+        if (s.messageAlpha > 0) {
+          s.messageAlpha -= 0.01;
+          setMessageAlpha(s.messageAlpha);
+        }
       }
 
       const isActuallyGameOver = s.isGameOver;
@@ -312,6 +343,21 @@ export function useGameLoop() {
     gameLoop();
 
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Buffer input for Easter Egg
+      const s = state.current;
+      if (e.key.length === 1 || e.key === ' ') {
+        s.inputBuffer = (s.inputBuffer + e.key).slice(-30);
+        const keywords = ['believe', 'Believe', '믿어', '믿는다', '난 널 믿어', '난널믿어', '널 믿는다'];
+        if (keywords.some(kw => s.inputBuffer.includes(kw))) {
+          if (!s.isAutopilot) {
+            s.isAutopilot = true;
+            s.messageAlpha = 2; // Lasts a few seconds
+            setAutopilotMessage('누군가 나를 믿어준다는 것.');
+            s.inputBuffer = ''; // Clear after trigger
+          }
+        }
+      }
+
       if (e.code === 'Space' || e.code === 'ArrowUp') {
         audioManager.init();
         if (!state.current.isStarted || state.current.isGameOver) {
@@ -345,5 +391,5 @@ export function useGameLoop() {
     };
   }, []); // Empty deps so loop binds once
 
-  return { canvasRef, isGameOver, score, isStarted, hp, gameOverAlpha, startGame, jump, releaseJump };
+  return { canvasRef, isGameOver, score, isStarted, hp, gameOverAlpha, autopilotMessage, messageAlpha, startGame, jump, releaseJump };
 }

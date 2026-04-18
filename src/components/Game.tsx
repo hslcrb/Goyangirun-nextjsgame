@@ -5,7 +5,7 @@ import { audioManager } from '@/utils/audio';
 import { useState } from 'react';
 
 export default function Game() {
-  const { canvasRef, isGameOver, score, isStarted, gameOverAlpha, startGame, jump, releaseJump } = useGameLoop();
+  const { canvasRef, isGameOver, score, isStarted, gameOverAlpha, autopilotMessage, messageAlpha, startGame, jump, releaseJump } = useGameLoop();
   const [isMuted, setIsMuted] = useState(false);
 
   const toggleMute = (e: React.MouseEvent) => {
@@ -88,6 +88,20 @@ export default function Game() {
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* Autopilot Activation Message */}
+      {messageAlpha > 0 && (
+        <div 
+          className="absolute top-1/3 left-0 right-0 pointer-events-none flex justify-center z-[110]"
+          style={{ opacity: Math.min(1, messageAlpha) }}
+        >
+          <div className="bg-white/10 backdrop-blur-sm px-8 py-3 rounded-full border border-white/20">
+            <p className="text-white text-xl font-light tracking-[0.3em] drop-shadow-lg">
+              {autopilotMessage}
+            </p>
+          </div>
         </div>
       )}
     </div>
