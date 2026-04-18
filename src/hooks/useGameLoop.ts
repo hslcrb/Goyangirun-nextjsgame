@@ -250,7 +250,7 @@ export function useGameLoop() {
       // Draw
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       
-      const catKey = s.isGameOver ? 'CAT_SMILE_1' : (s.cat.smileTime > 0 ? (s.frameCount % 20 < 10 ? 'CAT_SMILE_1' : 'CAT_SMILE_2') : (s.cat.isJumping ? 'CAT_SIDE' : (s.frameCount % 20 < 10 ? 'CAT_SIDE' : 'CAT_WALK')));
+      const catKey = s.isGameOver ? 'CAT_SMILE_1' : (s.cat.smileTime > 0 ? (s.frameCount % 20 < 10 ? 'CAT_SMILE_1' : 'CAT_SMILE_2') : (s.cat.isJumping ? 'CAT_RUN_1' : (s.frameCount % 20 < 10 ? 'CAT_RUN_1' : 'CAT_RUN_2')));
       const catSprite = (Sprites as any)[catKey];
       if (catSprite) {
         drawPixelArt(ctx, catSprite, s.cat.x, s.cat.y, 3, s.cat.iframeTime > 0 && s.frameCount % 10 < 5 ? 0.5 : 1);

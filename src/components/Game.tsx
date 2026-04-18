@@ -100,11 +100,11 @@ export default function Game() {
       {/* Autopilot Activation Message */}
       {messageAlpha > 0 && (
         <div 
-          className="absolute top-1/3 left-0 right-0 pointer-events-none flex justify-center z-[110]"
+          className="absolute top-1/4 left-0 right-0 pointer-events-none flex justify-center z-[110]"
           style={{ opacity: Math.min(1, messageAlpha) }}
         >
-          <div className="bg-white/10 backdrop-blur-sm px-8 py-3 rounded-full border border-white/20">
-            <p className="text-white text-xl font-light tracking-[0.3em] drop-shadow-lg">
+          <div className="bg-white/40 backdrop-blur-md px-10 py-4 rounded-full border border-pink-200/50 shadow-xl shadow-pink-200/20">
+            <p className="text-pink-900 text-2xl font-light tracking-[0.4em] drop-shadow-sm italic">
               {autopilotMessage}
             </p>
           </div>
