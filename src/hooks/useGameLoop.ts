@@ -227,12 +227,57 @@ export function useGameLoop() {
         }
         if (s.score % 10 === 0) setScore(s.score);
 
-        // Autopilot AI
+        // --- Advanced Autopilot AI ---
         if (s.isAutopilot) {
-          const nearest = s.entities.find(e => e.type.includes('cactus') && e.x > s.cat.x);
-          if (nearest) {
-            const threshold = 130 + s.speed * 8;
-            if (nearest.x - s.cat.x < threshold && !s.cat.isJumping) jump();
+          // Identify nearest cactus and churu
+          const nearestCactus = s.entities.find(e => e.type.includes('cactus') && e.x > s.cat.x);
+          const nearestChuru = s.entities.find(e => e.type === 'churu' && e.x > s.cat.x);
+
+          // Calculate time to collision (in frames)
+          // Cat front is at s.cat.x + cat_width. But hitbox is slightly inside.
+          const catFront = s.cat.x + 80; 
+          
+          if (nearestCactus) {
+            const framesToCactus = (nearestCactus.x - catFront) / s.speed;
+            
+            // Jump threshold: roughly 15-25 frames depending on speed
+            // Large cactus needs more lead time? Let's stay safe: 20 frames.
+            const leadTime = 18 + (s.speed * 0.5);
+
+            if (framesToCactus < leadTime && !s.cat.isJumping) {
+              jump();
+            }
+
+            // Intelligent Landing: If we are jumping, should we hold?
+            if (s.cat.isJumping) {
+              // If there's another cactus right after this one, or the current one is wide (large)
+              // Keep holding jump to stay in air longer
+              const cactusRect = { 
+                left: nearestCactus.x, 
+                right: nearestCactus.x + nearestCactus.width 
+              };
+              
+              if (catFront < cactusRect.right + 20) {
+                s.cat.isHoldingJump = true;
+              } else {
+                // Predictive hold for the NEXT one
+                const nextCactus = s.entities.find(e => e.type.includes('cactus') && e.x > nearestCactus.x);
+                if (nextCactus) {
+                  const gap = nextCactus.x - cactusRect.right;
+                  if (gap < 150) s.cat.isHoldingJump = true;
+                  else s.cat.isHoldingJump = false;
+                } else {
+                  s.cat.isHoldingJump = false;
+                }
+              }
+            }
+          } else if (nearestChuru) {
+            // Churu Collector
+            const framesToChuru = (nearestChuru.x - catFront) / s.speed;
+            if (framesToChuru < 15 && !s.cat.isJumping) {
+              jump();
+              s.cat.isHoldingJump = false; // Short jump for churu usually better
+            }
           }
         }
       }
