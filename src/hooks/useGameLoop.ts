@@ -85,9 +85,21 @@ export function useGameLoop() {
     };
     // Per user request, Game Over resets autopilot. 
     // Here we reset if it was a game over restart.
-    if (hp <= 0) state.current.isAutopilot = false; 
-    setAutopilotMessage('');
-    setMessageAlpha(0);
+    if (hp <= 0) {
+      // If was game over, we check if autopilot was triggered while in game over screen
+      // If it was already true (triggered on start/gameover screen), we keep it.
+      // But we can reset it if the user wants a clean slate. 
+      // User said "game is once over" is a way to deactivate. 
+      // So if hp <= 0 we reset it unless it was JUST activated.
+    } 
+    
+    // If it was activated while in start/gameover screen, show the message now
+    if (state.current.isAutopilot) {
+      state.current.messageAlpha = 2; // High value to ensure it's visible long enough
+      setAutopilotMessage('누군가 나를 믿어준다는 것.');
+      setMessageAlpha(2);
+    }
+
     setIsStarted(true);
     setIsGameOver(false);
     setScore(0);
@@ -253,6 +265,7 @@ export function useGameLoop() {
             s.hp = 0;
             s.isGameOver = true;
             setIsGameOver(true);
+            s.isAutopilot = false; // Deactivate on Game Over
             audioManager.fadeOutBgm(1.5); // 1.5s fade out
           }
           setHp(s.hp);
@@ -272,12 +285,12 @@ export function useGameLoop() {
             }
           }
         }
+      }
 
-        // --- Message Fading ---
-        if (s.messageAlpha > 0) {
-          s.messageAlpha -= 0.01;
-          setMessageAlpha(s.messageAlpha);
-        }
+      // --- Message Fading (Always runs regardless of game state) ---
+      if (s.messageAlpha > 0) {
+        s.messageAlpha -= 0.015;
+        setMessageAlpha(Math.max(0, s.messageAlpha));
       }
 
       const isActuallyGameOver = s.isGameOver;
@@ -349,12 +362,10 @@ export function useGameLoop() {
         s.inputBuffer = (s.inputBuffer + e.key).slice(-30);
         const keywords = ['believe', 'Believe', '믿어', '믿는다', '난 널 믿어', '난널믿어', '널 믿는다'];
         if (keywords.some(kw => s.inputBuffer.includes(kw))) {
-          if (!s.isAutopilot) {
-            s.isAutopilot = true;
-            s.messageAlpha = 2; // Lasts a few seconds
-            setAutopilotMessage('누군가 나를 믿어준다는 것.');
-            s.inputBuffer = ''; // Clear after trigger
-          }
+          s.isAutopilot = true;
+          s.messageAlpha = 2; // Show immediately
+          setAutopilotMessage('누군가 나를 믿어준다는 것.');
+          s.inputBuffer = ''; // Clear after trigger
         }
       }
 
