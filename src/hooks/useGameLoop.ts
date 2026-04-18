@@ -30,7 +30,7 @@ export function useGameLoop() {
 
   // Game state refs
   const state = useRef({
-    cat: { x: 50, y: 0, width: 56, height: 48, vy: 0, isJumping: false, iframeTime: 0, isHoldingJump: false },
+    cat: { x: 50, y: 0, width: 128, height: 48, vy: 0, isJumping: false, iframeTime: 0, isHoldingJump: false },
     entities: [] as GameObject[],
     heartParticles: [] as HeartParticle[],
     score: 0,
@@ -62,7 +62,7 @@ export function useGameLoop() {
     audioManager.startBgm();
 
     state.current = {
-      cat: { x: 50, y: 0, width: 56, height: 48, vy: 0, isJumping: false, iframeTime: 0, isHoldingJump: false },
+      cat: { x: 50, y: 0, width: 128, height: 48, vy: 0, isJumping: false, iframeTime: 0, isHoldingJump: false },
       entities: [],
       heartParticles: [],
       score: 0,
@@ -194,7 +194,8 @@ export function useGameLoop() {
 
           // Padding differs by type to be forgiving
           const p = ent.type === 'cactus_large' ? 6 : 4;
-          const catRect = { left: s.cat.x + 8, right: s.cat.x + s.cat.width - 8, top: s.cat.y + 8, bottom: s.cat.y + s.cat.height };
+          // Cat width is 128px, much of the left is tail (~40px) and face right padding (~20px empty if not head)
+          const catRect = { left: s.cat.x + 24, right: s.cat.x + s.cat.width - 16, top: s.cat.y + 12, bottom: s.cat.y + s.cat.height - 4 };
           const entRect = { left: ent.x + p, right: ent.x + ent.width - p, top: ent.y + p, bottom: ent.y + ent.height };
 
           // Check overlap
