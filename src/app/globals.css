@@ -21,8 +21,16 @@ body {
 *, *::before, *::after {
   user-select: none;
   -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
 img, a {
   -webkit-user-drag: none;
+}
+
+.no-scroll {
+  overflow: hidden;
+  position: fixed;
+  width: 100%;
 }
