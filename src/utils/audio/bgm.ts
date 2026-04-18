@@ -70,7 +70,7 @@ export class BGMEngine {
     gain.gain.exponentialRampToValueAtTime(0.001, time + dur);
 
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(AudioContextManager.getMasterGain());
     osc.start(time);
     osc.stop(time + dur);
   }
@@ -84,7 +84,7 @@ export class BGMEngine {
     gain.gain.setValueAtTime(volume, time);
     gain.gain.exponentialRampToValueAtTime(0.01, time + 0.1);
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(AudioContextManager.getMasterGain());
     osc.start(time);
     osc.stop(time + 0.1);
   }
@@ -108,7 +108,7 @@ export class BGMEngine {
 
     noise.connect(filter);
     filter.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(AudioContextManager.getMasterGain());
     noise.start(time);
   }
 
@@ -131,7 +131,7 @@ export class BGMEngine {
 
     osc.connect(filter);
     filter.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(AudioContextManager.getMasterGain());
     osc.start(time);
     osc.stop(time + dur);
   }
@@ -148,7 +148,7 @@ export class BGMEngine {
     gain.gain.exponentialRampToValueAtTime(0.001, time + 0.2);
 
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(AudioContextManager.getMasterGain());
     osc.start(time);
     osc.stop(time + 0.2);
   }
@@ -168,7 +168,6 @@ export class BGMEngine {
       const songBar = currentBar % this.BARS;
 
       // Layer Management based on song progress
-      const hasPiano = true;
       const hasDrums = songBar >= 16 && songBar < 48;
       const hasStrings = songBar >= 48 && songBar < 68;
       const hasGlass = songBar >= 32 && songBar < 68;
@@ -214,7 +213,13 @@ export class BGMEngine {
     if (this.isPlaying) return;
     this.isPlaying = true;
     this.beatIndex = 0;
-    this.nextNoteTime = AudioContextManager.getCtx().currentTime + 0.1;
+    const ctx = AudioContextManager.getCtx();
+    const masterGain = AudioContextManager.getMasterGain();
+    
+    // Reset volume if it was faded out
+    masterGain.gain.setValueAtTime(AudioContextManager.isMuted ? 0 : 1, ctx.currentTime);
+    
+    this.nextNoteTime = ctx.currentTime + 0.1;
     this.scheduler();
   }
 
@@ -224,5 +229,17 @@ export class BGMEngine {
       window.clearTimeout(this.timerId);
       this.timerId = null;
     }
+  }
+
+  public static fadeOut(duration: number) {
+    const ctx = AudioContextManager.getCtx();
+    const masterGain = AudioContextManager.getMasterGain();
+    
+    masterGain.gain.setValueAtTime(masterGain.gain.value, ctx.currentTime);
+    masterGain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    
+    setTimeout(() => {
+      this.stop();
+    }, duration * 1000);
   }
 }

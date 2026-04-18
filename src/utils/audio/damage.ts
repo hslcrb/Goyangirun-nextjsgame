@@ -15,7 +15,7 @@ export function playDamageSound() {
     gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
 
     osc.connect(gain);
-    gain.connect(ctx.destination);
+    gain.connect(AudioContextManager.getMasterGain());
 
     osc.start();
     osc.stop(ctx.currentTime + 0.1);

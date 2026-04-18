@@ -40,7 +40,8 @@ export function useGameLoop() {
     isGameOver: false,
     isStarted: false,
     nextEntityId: 0,
-    nextSpawnTime: 60
+    nextSpawnTime: 60,
+    gameOverAlpha: 0
   });
 
   const jump = () => {
@@ -70,7 +71,8 @@ export function useGameLoop() {
       isGameOver: false,
       isStarted: true,
       nextEntityId: 0,
-      nextSpawnTime: 60
+      nextSpawnTime: 60,
+      gameOverAlpha: 0
     };
     setIsStarted(true);
     setIsGameOver(false);
@@ -236,13 +238,18 @@ export function useGameLoop() {
             s.hp = 0;
             s.isGameOver = true;
             setIsGameOver(true);
-            audioManager.stopBgm();
+            audioManager.fadeOutBgm(1.5); // 1.5s fade out
           }
           setHp(s.hp);
         }
 
         // Sync score
         if (s.score % 10 === 0) setScore(s.score);
+      }
+
+      const isActuallyGameOver = s.isGameOver;
+      if (isActuallyGameOver && s.gameOverAlpha < 1) {
+        s.gameOverAlpha += 0.015; // Approx 1s fade
       }
 
       // Draw
@@ -289,6 +296,28 @@ export function useGameLoop() {
       s.heartParticles.forEach(p => {
         drawPixelArt(ctx, p.sprite, p.x, p.y, 4, Math.max(0, p.alpha));
       });
+
+      // Draw Sentimental Game Over Overlay
+      if (s.gameOverAlpha > 0) {
+        ctx.fillStyle = `rgba(0, 0, 0, ${s.gameOverAlpha * 0.85})`;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        if (s.gameOverAlpha > 0.5) {
+          const textAlpha = Math.min(1, (s.gameOverAlpha - 0.5) * 2);
+          ctx.fillStyle = `rgba(255, 255, 255, ${textAlpha})`;
+          ctx.font = '24px OneStoreMobilePop, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText('그곳에 더 이상의 봄은 없었습니다.', canvas.width / 2, canvas.height / 2);
+          
+          ctx.font = '16px OneStoreMobilePop, sans-serif';
+          ctx.fillText(`마지막 기억 (Score): ${s.score}`, canvas.width / 2, canvas.height / 2 + 40);
+          
+          if (s.gameOverAlpha > 0.8) {
+            ctx.font = '14px sans-serif';
+            ctx.fillText('Press Space to try again', canvas.width / 2, canvas.height - 40);
+          }
+        }
+      }
 
       if (!s.isStarted) {
         ctx.fillStyle = '#FF69B4';

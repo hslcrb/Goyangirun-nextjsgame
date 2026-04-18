@@ -23,7 +23,7 @@ export function playHealSound() {
       gain.gain.exponentialRampToValueAtTime(0.01, t + (idx + 1) * noteDuration);
       
       osc.connect(gain);
-      gain.connect(ctx.destination);
+      gain.connect(AudioContextManager.getMasterGain());
       
       osc.start(t + idx * noteDuration);
       osc.stop(t + (idx + 1) * noteDuration);
@@ -41,7 +41,7 @@ export function playHealSound() {
     shimmerGain.gain.linearRampToValueAtTime(0, t + notes.length * noteDuration);
     
     shimmerOsc.connect(shimmerGain);
-    shimmerGain.connect(ctx.destination);
+    shimmerGain.connect(AudioContextManager.getMasterGain());
     shimmerOsc.start(t);
     shimmerOsc.stop(t + notes.length * noteDuration);
     

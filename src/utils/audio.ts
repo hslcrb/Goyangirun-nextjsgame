@@ -12,4 +12,5 @@ export const audioManager = {
   playHeal: playHealSound,
   startBgm: () => BGMEngine.start(),
   stopBgm: () => BGMEngine.stop(),
+  fadeOutBgm: (dur: number) => BGMEngine.fadeOut(dur),
 };
