@@ -5,7 +5,7 @@ import { audioManager } from '@/utils/audio';
 import { useState } from 'react';
 
 export default function Game() {
-  const { canvasRef, isGameOver, score, isStarted, startGame, jump, releaseJump } = useGameLoop();
+  const { canvasRef, isGameOver, score, isStarted, gameOverAlpha, startGame, jump, releaseJump } = useGameLoop();
   const [isMuted, setIsMuted] = useState(false);
 
   const toggleMute = (e: React.MouseEvent) => {
@@ -44,39 +44,50 @@ export default function Game() {
         style={{ imageRendering: 'pixelated' }}
       />
 
-      {(!isStarted || isGameOver) && (
+      {/* Intro Overlay (Only shown before start and not on Game Over) */}
+      {!isStarted && !isGameOver && (
         <div className="absolute top-[80px] left-8 right-8 bottom-8 flex flex-col items-center justify-center bg-pink-100/40 backdrop-blur-md rounded-xl z-20">
           <div className="bg-white p-8 rounded-3xl shadow-2xl text-center transform hover:scale-105 transition-transform border-4 border-pink-300">
-            {!isStarted && !isGameOver && (
-              <>
-                <h1 className="text-5xl font-black text-pink-500 mb-2 tracking-wider drop-shadow-sm">고양이런 🎀</h1>
-                <p className="text-pink-400 mb-6 font-bold">크롬 공룡 스타일 핑크 고양이 게임</p>
-                <div className="flex flex-col items-center gap-4">
-                  <button
-                    onClick={startGame}
-                    className="px-10 py-4 bg-pink-400 hover:bg-pink-500 active:bg-pink-600 text-white font-bold rounded-full text-xl shadow-lg shadow-pink-400/50 transition-all hover:-translate-y-1"
-                  >
-                    💖 볼륨 켜고 귀엽게 시작하기
-                  </button>
-                  <p className="text-sm text-pink-400/80">스페이스바를 누르거나 화면을 클릭해서 점프!</p>
-                </div>
-              </>
-            )}
-            
-            {isGameOver && (
-              <>
-                <h1 className="text-6xl font-black text-pink-600 mb-4 uppercase tracking-widest drop-shadow-md">앗!</h1>
-                <p className="text-2xl font-bold text-pink-800 mb-2">선인장이 뾰족했어요 🌵</p>
-                <p className="text-xl text-pink-500 mb-8 border-t-2 border-b-2 border-pink-100 py-2">최종 점수: <span className="font-black text-3xl">{score}</span></p>
-                <button
-                  onClick={startGame}
-                  className="px-10 py-4 bg-pink-500 hover:bg-pink-600 active:bg-pink-700 text-white font-bold rounded-full text-xl shadow-lg shadow-pink-500/30 transition-all hover:-translate-y-1"
-                >
-                  다시 달리기 🐈
-                </button>
-              </>
-            )}
+            <h1 className="text-5xl font-black text-pink-500 mb-2 tracking-wider drop-shadow-sm">고양이런 🎀</h1>
+            <p className="text-pink-400 mb-6 font-bold">크롬 공룡 스타일 핑크 고양이 게임</p>
+            <div className="flex flex-col items-center gap-4">
+              <button
+                onClick={startGame}
+                className="px-10 py-4 bg-pink-400 hover:bg-pink-500 active:bg-pink-600 text-white font-bold rounded-full text-xl shadow-lg shadow-pink-400/50 transition-all hover:-translate-y-1"
+              >
+                💖 볼륨 켜고 귀엽게 시작하기
+              </button>
+              <p className="text-sm text-pink-400/80">스페이스바를 누르거나 화면을 클릭해서 점프!</p>
+            </div>
           </div>
+        </div>
+      )}
+
+      {/* Sentimental Full Screen Overlay */}
+      {gameOverAlpha > 0 && (
+        <div 
+          className="fixed inset-0 z-[100] flex flex-col items-center justify-center pointer-events-none"
+          style={{ backgroundColor: `rgba(0, 0, 0, ${gameOverAlpha * 0.95})` }}
+        >
+          {gameOverAlpha > 0.4 && (
+            <div 
+              className="text-center px-4"
+              style={{ opacity: Math.min(1, (gameOverAlpha - 0.4) * 2.5) }}
+            >
+              <h2 className="text-3xl md:text-5xl font-light text-white mb-8 tracking-[1em] md:tracking-[1.5em] animate-pulse">
+                그곳에 더 이상의 봄은 없었습니다.
+              </h2>
+              <div className="h-px w-32 bg-white/20 mx-auto mb-8" />
+              <p className="text-2xl text-white/50 mb-12 tracking-[0.5em] font-light">
+                마지막 기억 : {score}
+              </p>
+              {gameOverAlpha > 0.8 && (
+                <p className="text-xs text-white/30 tracking-widest animate-bounce uppercase">
+                  Press Space or Click to find the path again
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

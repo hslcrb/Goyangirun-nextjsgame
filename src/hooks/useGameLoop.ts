@@ -27,6 +27,7 @@ export function useGameLoop() {
   const [score, setScore] = useState(0);
   const [isStarted, setIsStarted] = useState(false);
   const [hp, setHp] = useState(15); // Max 15 (5 hearts * 3 parts)
+  const [gameOverAlpha, setGameOverAlpha] = useState(0);
 
   // Game state refs
   const state = useRef({
@@ -250,6 +251,7 @@ export function useGameLoop() {
       const isActuallyGameOver = s.isGameOver;
       if (isActuallyGameOver && s.gameOverAlpha < 1) {
         s.gameOverAlpha += 0.015; // Approx 1s fade
+        setGameOverAlpha(s.gameOverAlpha);
       }
 
       // Draw
@@ -297,28 +299,6 @@ export function useGameLoop() {
         drawPixelArt(ctx, p.sprite, p.x, p.y, 4, Math.max(0, p.alpha));
       });
 
-      // Draw Sentimental Game Over Overlay
-      if (s.gameOverAlpha > 0) {
-        ctx.fillStyle = `rgba(0, 0, 0, ${s.gameOverAlpha * 0.85})`;
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        if (s.gameOverAlpha > 0.5) {
-          const textAlpha = Math.min(1, (s.gameOverAlpha - 0.5) * 2);
-          ctx.fillStyle = `rgba(255, 255, 255, ${textAlpha})`;
-          ctx.font = '24px OneStoreMobilePop, sans-serif';
-          ctx.textAlign = 'center';
-          ctx.fillText('그곳에 더 이상의 봄은 없었습니다.', canvas.width / 2, canvas.height / 2);
-          
-          ctx.font = '16px OneStoreMobilePop, sans-serif';
-          ctx.fillText(`마지막 기억 (Score): ${s.score}`, canvas.width / 2, canvas.height / 2 + 40);
-          
-          if (s.gameOverAlpha > 0.8) {
-            ctx.font = '14px sans-serif';
-            ctx.fillText('Press Space to try again', canvas.width / 2, canvas.height - 40);
-          }
-        }
-      }
-
       if (!s.isStarted) {
         ctx.fillStyle = '#FF69B4';
         ctx.font = '20px "OneStoreMobilePop", sans-serif';
@@ -364,5 +344,5 @@ export function useGameLoop() {
     };
   }, []); // Empty deps so loop binds once
 
-  return { canvasRef, isGameOver, score, isStarted, hp, startGame, jump, releaseJump };
+  return { canvasRef, isGameOver, score, isStarted, hp, gameOverAlpha, startGame, jump, releaseJump };
 }
