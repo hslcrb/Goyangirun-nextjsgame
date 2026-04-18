@@ -1,15 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import { drawPixelArt, getHeartSprite, CAT_RUN_1, CAT_RUN_2, CAT_JUMP, CAT_CRY, CAT_SMILE_1, CAT_SMILE_2, OBSTACLE_CACTUS, OBSTACLE_CACTUS_LARGE, ITEM_CHURU } from '@/utils/assets';
-import { audioManager } from '@/utils/audio';
+import * as Sprites from '../utils/assets';
+import { drawPixelArt, getHeartSprite } from '../utils/assets';
+import { audioManager } from '../utils/audio';
 
 type GameObject = {
-  type: 'cactus_small' | 'cactus_large' | 'churu';
+  type: string;
   x: number;
   y: number;
   width: number;
   height: number;
   id: number;
-  active: boolean; // false when mouse is eaten
+  active: boolean;
 };
 
 type HeartParticle = {
@@ -26,12 +27,11 @@ export function useGameLoop() {
   const [isGameOver, setIsGameOver] = useState(false);
   const [score, setScore] = useState(0);
   const [isStarted, setIsStarted] = useState(false);
-  const [hp, setHp] = useState(15); // Max 15 (5 hearts * 3 parts)
+  const [hp, setHp] = useState(15); 
   const [gameOverAlpha, setGameOverAlpha] = useState(0);
   const [autopilotMessage, setAutopilotMessage] = useState('');
   const [messageAlpha, setMessageAlpha] = useState(0);
 
-  // Game state refs
   const state = useRef({
     cat: { x: 50, y: 0, width: 120, height: 57, vy: 0, isJumping: false, iframeTime: 0, isHoldingJump: false, smileTime: 0 },
     entities: [] as GameObject[],
@@ -63,10 +63,23 @@ export function useGameLoop() {
   };
 
   const startGame = () => {
+    const s = state.current;
+    
+    // Autopilot logic during start (if triggered on start screen)
+    if (s.isAutopilot) {
+      s.messageAlpha = 2;
+      setAutopilotMessage('누군가 나를 믿어준다는 것.');
+      setMessageAlpha(2);
+    } else {
+      setAutopilotMessage('');
+      setMessageAlpha(0);
+    }
+
     audioManager.init();
     audioManager.startBgm();
 
     state.current = {
+      ...state.current,
       cat: { x: 50, y: 0, width: 120, height: 57, vy: 0, isJumping: false, iframeTime: 0, isHoldingJump: false, smileTime: 0 },
       entities: [],
       heartParticles: [],
@@ -79,27 +92,9 @@ export function useGameLoop() {
       nextEntityId: 0,
       nextSpawnTime: 60,
       gameOverAlpha: 0,
-      isAutopilot: state.current.isAutopilot, // Persist autopilot if already active? User said refresh/gameover resets it. 
-      inputBuffer: '',
-      messageAlpha: 0
+      inputBuffer: ''
     };
-    // Per user request, Game Over resets autopilot. 
-    // Here we reset if it was a game over restart.
-    if (hp <= 0) {
-      // If was game over, we check if autopilot was triggered while in game over screen
-      // If it was already true (triggered on start/gameover screen), we keep it.
-      // But we can reset it if the user wants a clean slate. 
-      // User said "game is once over" is a way to deactivate. 
-      // So if hp <= 0 we reset it unless it was JUST activated.
-    } 
     
-    // If it was activated while in start/gameover screen, show the message now
-    if (state.current.isAutopilot) {
-      state.current.messageAlpha = 2; // High value to ensure it's visible long enough
-      setAutopilotMessage('누군가 나를 믿어준다는 것.');
-      setMessageAlpha(2);
-    }
-
     setIsStarted(true);
     setIsGameOver(false);
     setScore(0);
@@ -109,7 +104,6 @@ export function useGameLoop() {
 
   const spawnBrokenHeart = (x: number, y: number, damage: number) => {
     const s = state.current;
-    // Spawn small pieces based on damage amount
     for(let i=0; i<damage; i++) {
       s.heartParticles.push({
         x: x + Math.random() * 20,
@@ -117,7 +111,6 @@ export function useGameLoop() {
         vx: (Math.random() - 0.5) * 10,
         vy: -5 - Math.random() * 5,
         alpha: 1,
-        // Just use a tiny chunk of heart color as a particle, let's pass a small custom sprite
         sprite: [" H ","HHH"," H "] 
       });
     }
@@ -130,11 +123,7 @@ export function useGameLoop() {
     if (!ctx) return;
 
     let animationFrameId: number;
-    const PIXEL_SIZE = 3;
     const GROUND_Y = canvas.height - 20;
-
-    // Initial position
-    state.current.cat.y = GROUND_Y - state.current.cat.height;
 
     const gameLoop = () => {
       const s = state.current;
@@ -144,14 +133,12 @@ export function useGameLoop() {
         if (s.cat.iframeTime > 0) s.cat.iframeTime--;
         if (s.cat.smileTime > 0) s.cat.smileTime--;
         
-        // Physics (Variable Jump)
         s.cat.y += s.cat.vy;
         if (s.cat.y < GROUND_Y - s.cat.height) {
-          // Less gravity if holding jump and moving up
           if (s.cat.isHoldingJump && s.cat.vy < 0) {
             s.cat.vy += 0.45;
           } else {
-            s.cat.vy += 0.8; // Normal gravity
+            s.cat.vy += 1.0;
           }
         } else {
           s.cat.y = GROUND_Y - s.cat.height;
@@ -159,20 +146,16 @@ export function useGameLoop() {
           s.cat.isJumping = false;
         }
 
-        // Spawn entities dynamically
+        // Spawn logic
         if (s.frameCount >= s.nextSpawnTime) {
           const rand = Math.random();
-          let type: 'cactus_small' | 'cactus_large' | 'churu' = 'cactus_small';
-          let w = 36, h = 45; // 12x15 * 3
-          
-          if (rand > 0.9) {
-            type = 'churu';
-            w = 78; // 26 cols * 3
-            h = 18; // 6 rows * 3
-          } else if (rand > 0.6) {
-            type = 'cactus_large';
-            w = 48; // 16 cols * 3
-            h = 57; // 19 rows * 3
+          let type = 'cactus_small';
+          let w = 24, h = 36;
+
+          if (rand > 0.8) {
+            type = 'churu'; w = 36; h = 24;
+          } else if (rand > 0.4) {
+            type = 'cactus_large'; w = 48; h = 48;
           }
 
           s.entities.push({
@@ -185,170 +168,111 @@ export function useGameLoop() {
             active: true
           });
 
-          // Next spawn varies based on speed
           const baseInterval = Math.max(40, 100 - Math.floor(s.speed * 4));
-          const variance = Math.floor(Math.random() * 40) - 10;
-          s.nextSpawnTime = s.frameCount + baseInterval + variance;
+          s.nextSpawnTime = s.frameCount + baseInterval + Math.floor(Math.random() * 40) - 10;
         }
 
-        // Move entities
-        s.entities.forEach(ent => {
-          ent.x -= s.speed;
-        });
+        s.entities.forEach(ent => { ent.x -= s.speed; });
 
-        // Move particles
+        // Particles
         s.heartParticles.forEach(p => {
-          p.x += p.vx;
-          p.y += p.vy;
-          p.vy += 0.5; // grabity
-          p.alpha -= 0.02;
+          p.x += p.vx; p.y += p.vy; p.vy += 0.5; p.alpha -= 0.02;
         });
         s.heartParticles = s.heartParticles.filter(p => p.alpha > 0);
 
         if (s.frameCount % 10 === 0) {
           s.score++;
-          s.speed += 0.005; // gradually increase speed
+          s.speed += 0.005;
         }
 
-        // Clean up passed entities
         s.entities = s.entities.filter(ent => ent.x + ent.width > 0 && ent.active);
 
-        // Precise AABB Collision
+        // Collision
         let hitDamage = 0;
-        
-        for (let i = 0; i < s.entities.length; i++) {
-          const ent = s.entities[i];
+        for (let ent of s.entities) {
           if (!ent.active) continue;
-
-          // Padding differs by type to be forgiving
           const p = ent.type === 'cactus_large' ? 6 : 4;
-          // Cat width is 120px (40x3). 
           const catRect = { left: s.cat.x + 24, right: s.cat.x + s.cat.width - 24, top: s.cat.y + 15, bottom: s.cat.y + s.cat.height - 6 };
           const entRect = { left: ent.x + p, right: ent.x + ent.width - p, top: ent.y + p, bottom: ent.y + ent.height };
 
-          // Check overlap
           if (catRect.left < entRect.right && catRect.right > entRect.left &&
               catRect.top < entRect.bottom && catRect.bottom > entRect.top) {
-            
             if (ent.type === 'churu') {
-              ent.active = false; // Eat churu
-              s.hp = Math.min(15, s.hp + 3); // Heal 1 heart (3 parts)
-              s.cat.smileTime = 60; // Smile for ~1 sec
+              ent.active = false;
+              s.hp = Math.min(15, s.hp + 3);
+              s.cat.smileTime = 60;
               setHp(s.hp);
               audioManager.playHeal();
             } else if (s.cat.iframeTime <= 0) {
-              // Calculate overlap area to determine severity
-              const overlapX = Math.min(catRect.right, entRect.right) - Math.max(catRect.left, entRect.left);
-              const overlapY = Math.min(catRect.bottom, entRect.bottom) - Math.max(catRect.top, entRect.top);
-              const overlapArea = overlapX * overlapY;
-
-              if (ent.type === 'cactus_large') {
-                if (overlapArea > 1000) hitDamage = 6; // 2 hearts
-                else hitDamage = 3; // 1 heart
-              } else {
-                if (overlapArea > 800) hitDamage = 3; 
-                else if (overlapArea > 300) hitDamage = 2; 
-                else hitDamage = 1; 
-              }
-              break; // exit loop after finding a hit to process
+              const overlapArea = (Math.min(catRect.right, entRect.right) - Math.max(catRect.left, entRect.left)) * 
+                                  (Math.min(catRect.bottom, entRect.bottom) - Math.max(catRect.top, entRect.top));
+              if (ent.type === 'cactus_large') hitDamage = overlapArea > 1000 ? 6 : 3;
+              else hitDamage = overlapArea > 800 ? 3 : (overlapArea > 300 ? 2 : 1);
+              break;
             }
           }
         }
 
         if (hitDamage > 0) {
           s.hp -= hitDamage;
-          s.cat.iframeTime = 60; // ~1 second of invincibility at 60fps
+          s.cat.iframeTime = 60;
           audioManager.playDamage();
           spawnBrokenHeart(s.cat.x + s.cat.width/2, s.cat.y, hitDamage);
-          
           if (s.hp <= 0) {
-            s.hp = 0;
-            s.isGameOver = true;
+            s.hp = 0; s.isGameOver = true; s.isAutopilot = false;
             setIsGameOver(true);
-            s.isAutopilot = false; // Deactivate on Game Over
-            audioManager.fadeOutBgm(1.5); // 1.5s fade out
+            audioManager.fadeOutBgm(1.5);
           }
           setHp(s.hp);
         }
-
-        // Sync score
         if (s.score % 10 === 0) setScore(s.score);
 
-        // --- Autopilot AI ---
+        // Autopilot AI
         if (s.isAutopilot) {
-          const nearestObstacle = s.entities.find(ent => ent.type.includes('cactus') && ent.x > s.cat.x);
-          if (nearestObstacle) {
-            // Threshold depends on speed to jump at the right time
-            const threshold = 120 + s.speed * 10;
-            if (nearestObstacle.x - s.cat.x < threshold && !s.cat.isJumping) {
-              jump();
-            }
+          const nearest = s.entities.find(e => e.type.includes('cactus') && e.x > s.cat.x);
+          if (nearest) {
+            const threshold = 130 + s.speed * 8;
+            if (nearest.x - s.cat.x < threshold && !s.cat.isJumping) jump();
           }
         }
       }
 
-      // --- Message Fading (Always runs regardless of game state) ---
+      // Always update UI states
+      if (s.isGameOver && s.gameOverAlpha < 1) {
+        s.gameOverAlpha += 0.015;
+        setGameOverAlpha(s.gameOverAlpha);
+      }
       if (s.messageAlpha > 0) {
         s.messageAlpha -= 0.015;
         setMessageAlpha(Math.max(0, s.messageAlpha));
       }
 
-      const isActuallyGameOver = s.isGameOver;
-      if (isActuallyGameOver && s.gameOverAlpha < 1) {
-        s.gameOverAlpha += 0.015; // Approx 1s fade
-        setGameOverAlpha(s.gameOverAlpha);
-      }
-
       // Draw
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Draw ground
-      ctx.fillStyle = '#A5D6A7'; // Pastel green
-      ctx.fillRect(0, GROUND_Y, canvas.width, 4);
-
-      // Draw Cat with iframe flashing
-      const isVisible = s.cat.iframeTime <= 0 || s.frameCount % 10 < 5;
-      if (isVisible) {
-        let catFrame = CAT_RUN_1;
-        if (s.cat.iframeTime > 0) {
-          catFrame = CAT_CRY;
-        } else if (s.cat.smileTime > 0) {
-          catFrame = s.frameCount % 20 < 10 ? CAT_SMILE_1 : CAT_SMILE_2;
-        } else if (s.cat.isJumping) {
-          catFrame = CAT_JUMP;
-        } else {
-          catFrame = s.frameCount % 20 < 10 ? CAT_RUN_1 : CAT_RUN_2;
-        }
-        drawPixelArt(ctx, catFrame, s.cat.x, s.cat.y, PIXEL_SIZE);
+      
+      const catKey = s.isGameOver ? 'CAT_SMILE_1' : (s.cat.smileTime > 0 ? (s.frameCount % 20 < 10 ? 'CAT_SMILE_1' : 'CAT_SMILE_2') : (s.cat.isJumping ? 'CAT_SIDE' : (s.frameCount % 20 < 10 ? 'CAT_SIDE' : 'CAT_WALK')));
+      const catSprite = (Sprites as any)[catKey];
+      if (catSprite) {
+        drawPixelArt(ctx, catSprite, s.cat.x, s.cat.y, 3, s.cat.iframeTime > 0 && s.frameCount % 10 < 5 ? 0.5 : 1);
       }
 
-      // Draw Entities
       s.entities.forEach(ent => {
-        if (!ent.active) return;
-        let sprite = OBSTACLE_CACTUS;
-        if (ent.type === 'cactus_large') sprite = OBSTACLE_CACTUS_LARGE;
-        if (ent.type === 'churu') sprite = ITEM_CHURU;
-        drawPixelArt(ctx, sprite, ent.x, ent.y, PIXEL_SIZE);
+        const entKey = (ent.type === 'cactus_small' ? 'OBSTACLE_CACTUS_SMALL' : (ent.type === 'cactus_large' ? 'OBSTACLE_CACTUS_LARGE' : 'ITEM_CHURU'));
+        const entSprite = (Sprites as any)[entKey];
+        if (entSprite) {
+          drawPixelArt(ctx, entSprite, ent.x, ent.y, 3);
+        }
       });
 
-      // Draw UI Hearts in canvas (top left)
       const maxHearts = 5;
       for (let i = 0; i < maxHearts; i++) {
         const heartValue = Math.max(0, Math.min(3, s.hp - i * 3));
-        let heartSprite = getHeartSprite(heartValue === 3, heartValue > 0 && heartValue < 3);
-        drawPixelArt(ctx, heartSprite, 20 + i * 40, 20, 4);
+        drawPixelArt(ctx, getHeartSprite(heartValue === 3, heartValue > 0 && heartValue < 3), 20 + i * 40, 20, 4);
       }
 
-      // Draw particles
       s.heartParticles.forEach(p => {
         drawPixelArt(ctx, p.sprite, p.x, p.y, 4, Math.max(0, p.alpha));
       });
-
-      if (!s.isStarted) {
-        ctx.fillStyle = '#FF69B4';
-        ctx.font = '20px "OneStoreMobilePop", sans-serif';
-        ctx.textAlign = 'center';
-      }
 
       animationFrameId = requestAnimationFrame(gameLoop);
     };
@@ -356,51 +280,49 @@ export function useGameLoop() {
     gameLoop();
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Buffer input for Easter Egg
       const s = state.current;
+      // Buffer for Easter Egg
       if (e.key.length === 1 || e.key === ' ') {
-        s.inputBuffer = (s.inputBuffer + e.key).slice(-30);
-        const keywords = ['believe', 'Believe', '믿어', '믿는다', '난 널 믿어', '난널믿어', '널 믿는다'];
-        if (keywords.some(kw => s.inputBuffer.includes(kw))) {
+        s.inputBuffer = (s.inputBuffer + e.key).slice(-30).toLowerCase();
+        
+        // Support both composed and partially decomposed Korean keywords
+        const keywords = ['believe', '믿어', '믿는다', '난 널 믿어', '난널믿어', '널 믿는다', 'belive'];
+        if (keywords.some(kw => s.inputBuffer.includes(kw.toLowerCase()))) {
           s.isAutopilot = true;
-          s.messageAlpha = 2; // Show immediately
+          s.messageAlpha = 2;
           setAutopilotMessage('누군가 나를 믿어준다는 것.');
-          s.inputBuffer = ''; // Clear after trigger
+          s.inputBuffer = '';
         }
       }
 
       if (e.code === 'Space' || e.code === 'ArrowUp') {
         audioManager.init();
-        if (!state.current.isStarted || state.current.isGameOver) {
-          startGame();
-        } else {
-          jump();
-        }
+        if (!s.isStarted || s.isGameOver) startGame();
+        else jump();
       }
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'Space' || e.code === 'ArrowUp') {
-        releaseJump();
-      }
+      if (e.code === 'Space' || e.code === 'ArrowUp') releaseJump();
     };
 
-    const preventDefault = (e: Event) => e.preventDefault();
-
+    const prevent = (e: Event) => e.preventDefault();
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
-    window.addEventListener('contextmenu', preventDefault);
-    window.addEventListener('dragstart', preventDefault);
+    window.addEventListener('contextmenu', prevent);
+    window.addEventListener('dragstart', prevent);
 
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
-      window.removeEventListener('contextmenu', preventDefault);
-      window.removeEventListener('dragstart', preventDefault);
-      audioManager.stopBgm();
+      window.removeEventListener('contextmenu', prevent);
+      window.removeEventListener('dragstart', prevent);
     };
-  }, []); // Empty deps so loop binds once
+  }, []);
 
-  return { canvasRef, isGameOver, score, isStarted, hp, gameOverAlpha, autopilotMessage, messageAlpha, startGame, jump, releaseJump };
+  return { 
+    canvasRef, isGameOver, score, isStarted, hp, gameOverAlpha, 
+    autopilotMessage, messageAlpha, startGame, jump, releaseJump 
+  };
 }
