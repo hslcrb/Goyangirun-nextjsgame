@@ -11,6 +11,10 @@ export const colors = {
   'P': '#F48FB1', // Mouse pink tail/nose
   'T': '#4FC3F7', // Blue for tears
   'C': '#FFCC80', // Churu cream
+  'S': '#FFD1DC', // Sakura petal pink
+  'D': '#EAB8E4', // Distant mountain pink
+  'W': '#FFFFFF', // Cloud white
+  'B': '#B19CD9', // Distant soft purple/blue
 };
 
 export function drawPixelArt(ctx: CanvasRenderingContext2D, pixelData: string[], startX: number, startY: number, size: number, alpha: number = 1) {
@@ -241,4 +245,40 @@ export const ITEM_CHURU = [
   " 044111133333333111144CCC ",
   "  042222222222222222224000",
   "   00000000000000000000   "
+];
+
+export const SAKURA_PETAL = [
+  " S S ",
+  "SSSSS",
+  "SSSSS",
+  " SSS ",
+  "  S  "
+];
+
+export const CLOUD_SMALL = [
+  "   WWWW   ",
+  " WWWWWWWW ",
+  "WWWWWWWWWW",
+  " WWWWWWWW "
+];
+
+export const MOUNTAIN_DISTANT = [
+  "      B      ",
+  "     BBB     ",
+  "    BBBBB    ",
+  "   BBBBBBB   ",
+  "  BBBBBBBBB  ",
+  " BBBBBBBBBBB ",
+  "BBBBBBBBBBBBB"
+];
+
+export const SAKURA_TREE_FAR = [
+  "    SSSSS    ",
+  "   SSSSSSS   ",
+  "  SSSSSSSSS  ",
+  "  SSSSSSSSS  ",
+  "   SSSSSSS   ",
+  "    00000    ",
+  "      0      ",
+  "      0      "
 ];

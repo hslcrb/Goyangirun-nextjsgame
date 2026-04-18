@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import * as Sprites from '../utils/assets';
-import { drawPixelArt, getHeartSprite } from '../utils/assets';
+import { drawPixelArt, getHeartSprite, MOUNTAIN_DISTANT, CLOUD_SMALL, SAKURA_TREE_FAR } from '../utils/assets';
 import { audioManager } from '../utils/audio';
+import { SakuraEngine, ParallaxEngine } from '../utils/background/sakura';
 
 // --- Constants for Physics Simulation ---
 const GRAVITY = 1.0;
@@ -154,8 +155,23 @@ export function useGameLoop() {
     let animationFrameId: number;
     const GROUND_Y = canvas.height - 20;
 
+    // --- Background Engines ---
+    const sakuraEngine = new SakuraEngine(canvas.width, canvas.height);
+    const parallaxEngine = new ParallaxEngine(canvas.width);
+    
+    // Far mountains (slowest)
+    parallaxEngine.addLayer(MOUNTAIN_DISTANT, 180, 0.05, 5, 3);
+    // Clouds
+    parallaxEngine.addLayer(CLOUD_SMALL, 40, 0.1, 4, 4);
+    // Far trees
+    parallaxEngine.addLayer(SAKURA_TREE_FAR, 200, 0.4, 3, 5);
+
     const gameLoop = () => {
       const s = state.current;
+
+      // Update background elements even if not started
+      parallaxEngine.update(s.isStarted && !s.isGameOver ? s.speed : 0.5);
+      sakuraEngine.update(s.isStarted && !s.isGameOver ? s.speed : 0.5, s.cat.vy);
 
       if (s.isStarted && !s.isGameOver) {
         s.frameCount++;
@@ -294,8 +310,23 @@ export function useGameLoop() {
         s.messageAlpha -= 0.015; setMessageAlpha(Math.max(0, s.messageAlpha));
       }
 
-      // --- Rendering Optimization ---
+      // --- Rendering Order ---
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // 1. Far Background (Static gradient)
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, '#FFE4E1'); // Misty Rose
+      gradient.addColorStop(1, '#FFF5F5');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // 2. Parallax Layers
+      parallaxEngine.draw(ctx);
+
+      // 3. Middleground Petals
+      sakuraEngine.draw(ctx);
+
+      // 4. Game Objects
       const catKey = s.isGameOver ? 'CAT_SMILE_1' : (s.cat.smileTime > 0 ? (s.frameCount % 20 < 10 ? 'CAT_SMILE_1' : 'CAT_SMILE_2') : (s.cat.isJumping ? 'CAT_RUN_1' : (s.frameCount % 20 < 10 ? 'CAT_RUN_1' : 'CAT_RUN_2')));
       const catSprite = (Sprites as any)[catKey];
       if (catSprite) drawPixelArt(ctx, catSprite, s.cat.x, s.cat.y, 3, s.cat.iframeTime > 0 && s.frameCount % 10 < 5 ? 0.5 : 1);
