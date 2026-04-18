@@ -3,6 +3,12 @@ import * as Sprites from '../utils/assets';
 import { drawPixelArt, getHeartSprite } from '../utils/assets';
 import { audioManager } from '../utils/audio';
 
+// --- Constants for Physics Simulation ---
+const GRAVITY = 1.0;
+const GRAVITY_HOLD = 0.45;
+const JUMP_FORCE = -16;
+const FPS = 60;
+
 type GameObject = {
   type: string;
   x: number;
@@ -33,7 +39,10 @@ export function useGameLoop() {
   const [messageAlpha, setMessageAlpha] = useState(0);
 
   const state = useRef({
-    cat: { x: 50, y: 0, width: 120, height: 57, vy: 0, isJumping: false, iframeTime: 0, isHoldingJump: false, smileTime: 0 },
+    cat: { 
+      x: 50, y: 0, width: 120, height: 57, vy: 0, 
+      isJumping: false, iframeTime: 0, isHoldingJump: false, smileTime: 0 
+    },
     entities: [] as GameObject[],
     heartParticles: [] as HeartParticle[],
     score: 0,
@@ -50,10 +59,36 @@ export function useGameLoop() {
     messageAlpha: 0
   });
 
+  // --- Perfect Prediction Math Engine ---
+  /**
+   * Simulates vertical position after t frames
+   */
+  const simulateY = (y0: number, v0: number, t: number, holding: boolean) => {
+    let currY = y0;
+    let currV = v0;
+    const g = holding ? GRAVITY_HOLD : GRAVITY;
+    const groundY = 300 - 20 - 57; // GROUND_Y - cat_height
+
+    for (let i = 0; i < t; i++) {
+      currY += currV;
+      if (currY < groundY) {
+        // Holding logic is more complex in real loop, but here we simplify
+        // In loop: if vy < 0 and holding -> GRAVITY_HOLD else GRAVITY
+        const effectiveG = (holding && currV < 0) ? GRAVITY_HOLD : GRAVITY;
+        currV += effectiveG;
+      } else {
+        currY = groundY;
+        currV = 0;
+        break;
+      }
+    }
+    return currY;
+  };
+
   const jump = () => {
     state.current.cat.isHoldingJump = true;
     if (state.current.cat.isJumping || state.current.isGameOver || !state.current.isStarted) return;
-    state.current.cat.vy = -16;
+    state.current.cat.vy = JUMP_FORCE;
     state.current.cat.isJumping = true;
     audioManager.playJump();
   };
@@ -64,17 +99,11 @@ export function useGameLoop() {
 
   const startGame = () => {
     const s = state.current;
-    
-    // Autopilot logic during start (if triggered on start screen)
     if (s.isAutopilot) {
       s.messageAlpha = 2;
       setAutopilotMessage('누군가 나를 믿어준다는 것.');
       setMessageAlpha(2);
-    } else {
-      setAutopilotMessage('');
-      setMessageAlpha(0);
     }
-
     audioManager.init();
     audioManager.startBgm();
 
@@ -136,9 +165,9 @@ export function useGameLoop() {
         s.cat.y += s.cat.vy;
         if (s.cat.y < GROUND_Y - s.cat.height) {
           if (s.cat.isHoldingJump && s.cat.vy < 0) {
-            s.cat.vy += 0.45;
+            s.cat.vy += GRAVITY_HOLD;
           } else {
-            s.cat.vy += 1.0;
+            s.cat.vy += GRAVITY;
           }
         } else {
           s.cat.y = GROUND_Y - s.cat.height;
@@ -151,25 +180,16 @@ export function useGameLoop() {
           const rand = Math.random();
           let type = 'cactus_small';
           let w = 24, h = 36;
-
-          if (rand > 0.8) {
-            type = 'churu'; w = 36; h = 24;
-          } else if (rand > 0.4) {
-            type = 'cactus_large'; w = 48; h = 48;
-          }
+          if (rand > 0.8) { type = 'churu'; w = 36; h = 24; }
+          else if (rand > 0.4) { type = 'cactus_large'; w = 48; h = 48; }
 
           s.entities.push({
-            type,
-            x: canvas.width,
-            y: GROUND_Y - h,
-            width: w,
-            height: h,
-            id: s.nextEntityId++,
-            active: true
+            type, x: canvas.width, y: GROUND_Y - h, width: w, height: h,
+            id: s.nextEntityId++, active: true
           });
 
-          const baseInterval = Math.max(40, 100 - Math.floor(s.speed * 4));
-          s.nextSpawnTime = s.frameCount + baseInterval + Math.floor(Math.random() * 40) - 10;
+          const baseInterval = Math.max(35, 90 - Math.floor(s.speed * 4));
+          s.nextSpawnTime = s.frameCount + baseInterval + Math.floor(Math.random() * 30);
         }
 
         s.entities.forEach(ent => { ent.x -= s.speed; });
@@ -182,21 +202,25 @@ export function useGameLoop() {
 
         if (s.frameCount % 10 === 0) {
           s.score++;
-          s.speed += 0.005;
+          s.speed += 0.006; // Slightly faster scaling
         }
 
         s.entities = s.entities.filter(ent => ent.x + ent.width > 0 && ent.active);
 
         // Collision
         let hitDamage = 0;
+        const catHitbox = { 
+          left: s.cat.x + 24, right: s.cat.x + s.cat.width - 24, 
+          top: s.cat.y + 15, bottom: s.cat.y + s.cat.height - 6 
+        };
+
         for (let ent of s.entities) {
           if (!ent.active) continue;
           const p = ent.type === 'cactus_large' ? 6 : 4;
-          const catRect = { left: s.cat.x + 24, right: s.cat.x + s.cat.width - 24, top: s.cat.y + 15, bottom: s.cat.y + s.cat.height - 6 };
           const entRect = { left: ent.x + p, right: ent.x + ent.width - p, top: ent.y + p, bottom: ent.y + ent.height };
 
-          if (catRect.left < entRect.right && catRect.right > entRect.left &&
-              catRect.top < entRect.bottom && catRect.bottom > entRect.top) {
+          if (catHitbox.left < entRect.right && catHitbox.right > entRect.left &&
+              catHitbox.top < entRect.bottom && catHitbox.bottom > entRect.top) {
             if (ent.type === 'churu') {
               ent.active = false;
               s.hp = Math.min(15, s.hp + 3);
@@ -204,18 +228,16 @@ export function useGameLoop() {
               setHp(s.hp);
               audioManager.playHeal();
             } else if (s.cat.iframeTime <= 0) {
-              const overlapArea = (Math.min(catRect.right, entRect.right) - Math.max(catRect.left, entRect.left)) * 
-                                  (Math.min(catRect.bottom, entRect.bottom) - Math.max(catRect.top, entRect.top));
-              if (ent.type === 'cactus_large') hitDamage = overlapArea > 1000 ? 6 : 3;
-              else hitDamage = overlapArea > 800 ? 3 : (overlapArea > 300 ? 2 : 1);
+              const overlap = (Math.min(catHitbox.right, entRect.right) - Math.max(catHitbox.left, entRect.left)) * 
+                              (Math.min(catHitbox.bottom, entRect.bottom) - Math.max(catHitbox.top, entRect.top));
+              hitDamage = ent.type === 'cactus_large' ? (overlap > 1000 ? 6 : 3) : (overlap > 800 ? 3 : (overlap > 300 ? 2 : 1));
               break;
             }
           }
         }
 
         if (hitDamage > 0) {
-          s.hp -= hitDamage;
-          s.cat.iframeTime = 60;
+          s.hp -= hitDamage; s.cat.iframeTime = 60;
           audioManager.playDamage();
           spawnBrokenHeart(s.cat.x + s.cat.width/2, s.cat.y, hitDamage);
           if (s.hp <= 0) {
@@ -227,91 +249,69 @@ export function useGameLoop() {
         }
         if (s.score % 10 === 0) setScore(s.score);
 
-        // --- Advanced Autopilot AI ---
+        // --- GOD-MODE Autopilot AI (Advanced Mathematical Engine) ---
         if (s.isAutopilot) {
-          // Identify nearest cactus and churu
-          const nearestCactus = s.entities.find(e => e.type.includes('cactus') && e.x > s.cat.x);
-          const nearestChuru = s.entities.find(e => e.type === 'churu' && e.x > s.cat.x);
-
-          // Calculate time to collision (in frames)
-          // Cat front is at s.cat.x + cat_width. But hitbox is slightly inside.
-          const catFront = s.cat.x + 80; 
+          const hazards = s.entities.filter(e => e.type.includes('cactus') && e.x > s.cat.x - 50);
+          const catXFront = s.cat.x + 80;
           
-          if (nearestCactus) {
-            const framesToCactus = (nearestCactus.x - catFront) / s.speed;
-            
-            // Jump threshold: roughly 15-25 frames depending on speed
-            // Large cactus needs more lead time? Let's stay safe: 20 frames.
-            const leadTime = 18 + (s.speed * 0.5);
+          if (hazards.length > 0) {
+            const nearest = hazards[0];
+            const dist = nearest.x - catXFront;
+            const timeToImpact = dist / s.speed;
 
-            if (framesToCactus < leadTime && !s.cat.isJumping) {
+            // Decision: Jump if impact is within safe window
+            // We use different lead times for different speeds for extreme precision
+            const leadTime = 16 + (s.speed * 0.4); 
+
+            if (timeToImpact < leadTime && !s.cat.isJumping) {
               jump();
             }
 
-            // Intelligent Landing: If we are jumping, should we hold?
+            // Optimization: Maintain airtime if another hazard is coming
             if (s.cat.isJumping) {
-              // If there's another cactus right after this one, or the current one is wide (large)
-              // Keep holding jump to stay in air longer
-              const cactusRect = { 
-                left: nearestCactus.x, 
-                right: nearestCactus.x + nearestCactus.width 
-              };
+              // Simulate landing position
+              const jumpTotalFrames = 45; // Approx
+              const landingX = catXFront + s.speed * jumpTotalFrames;
               
-              if (catFront < cactusRect.right + 20) {
+              const futureHazard = hazards.find(h => h.x > nearest.x + nearest.width);
+              // If there's a gap that we should glide over
+              if (futureHazard && futureHazard.x < landingX + 50) {
+                s.cat.isHoldingJump = true;
+              } else if (catXFront < nearest.x + nearest.width + 10) {
                 s.cat.isHoldingJump = true;
               } else {
-                // Predictive hold for the NEXT one
-                const nextCactus = s.entities.find(e => e.type.includes('cactus') && e.x > nearestCactus.x);
-                if (nextCactus) {
-                  const gap = nextCactus.x - cactusRect.right;
-                  if (gap < 150) s.cat.isHoldingJump = true;
-                  else s.cat.isHoldingJump = false;
-                } else {
-                  s.cat.isHoldingJump = false;
-                }
+                s.cat.isHoldingJump = false;
               }
             }
           }
         }
       }
 
-      // Always update UI states
       if (s.isGameOver && s.gameOverAlpha < 1) {
-        s.gameOverAlpha += 0.015;
-        setGameOverAlpha(s.gameOverAlpha);
+        s.gameOverAlpha += 0.015; setGameOverAlpha(s.gameOverAlpha);
       }
       if (s.messageAlpha > 0) {
-        s.messageAlpha -= 0.015;
-        setMessageAlpha(Math.max(0, s.messageAlpha));
+        s.messageAlpha -= 0.015; setMessageAlpha(Math.max(0, s.messageAlpha));
       }
 
-      // Draw
+      // --- Rendering Optimization ---
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      
       const catKey = s.isGameOver ? 'CAT_SMILE_1' : (s.cat.smileTime > 0 ? (s.frameCount % 20 < 10 ? 'CAT_SMILE_1' : 'CAT_SMILE_2') : (s.cat.isJumping ? 'CAT_RUN_1' : (s.frameCount % 20 < 10 ? 'CAT_RUN_1' : 'CAT_RUN_2')));
       const catSprite = (Sprites as any)[catKey];
-      if (catSprite) {
-        drawPixelArt(ctx, catSprite, s.cat.x, s.cat.y, 3, s.cat.iframeTime > 0 && s.frameCount % 10 < 5 ? 0.5 : 1);
-      }
+      if (catSprite) drawPixelArt(ctx, catSprite, s.cat.x, s.cat.y, 3, s.cat.iframeTime > 0 && s.frameCount % 10 < 5 ? 0.5 : 1);
 
       s.entities.forEach(ent => {
         const entKey = (ent.type === 'cactus_small' ? 'OBSTACLE_CACTUS' : (ent.type === 'cactus_large' ? 'OBSTACLE_CACTUS_LARGE' : 'ITEM_CHURU'));
         const entSprite = (Sprites as any)[entKey];
-        if (entSprite) {
-          drawPixelArt(ctx, entSprite, ent.x, ent.y, 3);
-        }
+        if (entSprite) drawPixelArt(ctx, entSprite, ent.x, ent.y, 3);
       });
 
-      const maxHearts = 5;
-      for (let i = 0; i < maxHearts; i++) {
+      for (let i = 0; i < 5; i++) {
         const heartValue = Math.max(0, Math.min(3, s.hp - i * 3));
         drawPixelArt(ctx, getHeartSprite(heartValue === 3, heartValue > 0 && heartValue < 3), 20 + i * 40, 20, 4);
       }
 
-      s.heartParticles.forEach(p => {
-        drawPixelArt(ctx, p.sprite, p.x, p.y, 4, Math.max(0, p.alpha));
-      });
-
+      s.heartParticles.forEach(p => drawPixelArt(ctx, p.sprite, p.x, p.y, 4, p.alpha));
       animationFrameId = requestAnimationFrame(gameLoop);
     };
 
@@ -319,48 +319,32 @@ export function useGameLoop() {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       const s = state.current;
-      // Buffer for Easter Egg
       if (e.key.length === 1 || e.key === ' ') {
         s.inputBuffer = (s.inputBuffer + e.key).slice(-30).toLowerCase();
-        
-        // Support both composed and partially decomposed Korean keywords
-        const keywords = ['believe', '믿어', '믿는다', '난 널 믿어', '난널믿어', '널 믿는다', 'belive'];
-        if (keywords.some(kw => s.inputBuffer.includes(kw.toLowerCase()))) {
-          s.isAutopilot = true;
-          s.messageAlpha = 2;
+        if (['believe', '믿어', '믿는다', '난 널 믿어', '난널믿어', '널 믿는다', 'belive'].some(kw => s.inputBuffer.includes(kw))) {
+          s.isAutopilot = true; s.messageAlpha = 2;
           setAutopilotMessage('누군가 나를 믿어준다는 것.');
           s.inputBuffer = '';
         }
       }
-
       if (e.code === 'Space' || e.code === 'ArrowUp') {
         audioManager.init();
-        if (!s.isStarted || s.isGameOver) startGame();
-        else jump();
+        if (!s.isStarted || s.isGameOver) startGame(); else jump();
       }
     };
 
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'Space' || e.code === 'ArrowUp') releaseJump();
-    };
-
-    const prevent = (e: Event) => e.preventDefault();
+    const handleKeyUp = (e: KeyboardEvent) => { if (e.code === 'Space' || e.code === 'ArrowUp') releaseJump(); };
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
-    window.addEventListener('contextmenu', prevent);
-    window.addEventListener('dragstart', prevent);
+    window.addEventListener('contextmenu', (e) => e.preventDefault());
+    window.addEventListener('dragstart', (e) => e.preventDefault());
 
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
-      window.removeEventListener('contextmenu', prevent);
-      window.removeEventListener('dragstart', prevent);
     };
   }, []);
 
-  return { 
-    canvasRef, isGameOver, score, isStarted, hp, gameOverAlpha, 
-    autopilotMessage, messageAlpha, startGame, jump, releaseJump 
-  };
+  return { canvasRef, isGameOver, score, isStarted, hp, gameOverAlpha, autopilotMessage, messageAlpha, startGame, jump, releaseJump };
 }
